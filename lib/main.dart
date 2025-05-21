@@ -5,18 +5,24 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'providers/theme_provider.dart';
 import 'providers/sound_provider.dart';
+import 'providers/history_provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Debugging
+  WidgetsFlutterBinding.ensureInitialized();
 
+  // Create Providers
+  final historyProvider = HistoryProvider();
   final soundProvider = SoundProvider();
-  await soundProvider.initializeSound(); // Debugging
+
+  // Initialize
+  await soundProvider.initializeSound(); 
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => soundProvider),
+        ChangeNotifierProvider(create: (_) => historyProvider),
       ],
       child: const MyApp(),
     ),
