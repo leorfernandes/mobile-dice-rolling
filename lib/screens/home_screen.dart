@@ -55,7 +55,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.clear_all),
+                      icon: const Icon(Icons.delete),
                       onPressed: () {
                         Provider.of<HistoryProvider>(context, listen: false).clearHistory();
                       },

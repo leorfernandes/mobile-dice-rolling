@@ -16,31 +16,45 @@ class HistoryProvider with ChangeNotifier {
 
   // Load history from storage
   Future<void> _loadHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final historyJson = prefs.getStringList(_storageKey) ?? [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyJson = prefs.getStringList(_storageKey) ?? [];
 
-    _history.clear();
-    _history.addAll(historyJson
-      .map((item) => RollEntry.fromJson(jsonDecode(item)))
-      .toList());
+      _history.clear();
+      for (var item in historyJson) {
+        try {
+          final entry = RollEntry.fromJson(jsonDecode(item));
+          _history.add(entry);
+        } catch (e) {
+          print('Error decoding history entry: $e');
+        }
+      }
 
-    notifyListeners();
+      notifyListeners();
+    } catch (e) {
+      print('Error loading history: $e');
+      _history.clear();
+    }
   }
 
   // Save history to storage
   Future<void> _saveHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final historyJson = _history
-      .map((entry) => jsonEncode(entry.toJson()))
-      .toList();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final historyJson = _history
+        .map((entry) => jsonEncode(entry.toJson()))
+        .toList();
 
-    await prefs.setStringList(_storageKey, historyJson);
+      await prefs.setStringList(_storageKey, historyJson);
+    } catch (e) {
+      print('Error saving history: $e');
+    }
   }
 
   // Add a new roll entry
-  void addRoll (int result, int sides, [int modifier = 0]) {
+  void addMultiRoll (List<int> results, int sides, [int modifier = 0]) {
     _history.insert(0, RollEntry(
-      result: result,
+      diceResults: List.from(results),
       sides: sides,
       modifier: modifier,
       timestamp: DateTime.now(),
@@ -52,6 +66,10 @@ class HistoryProvider with ChangeNotifier {
 
     _saveHistory();
     notifyListeners();
+  }
+
+  void addRoll (int result, int sides, [int modifier = 0]) {
+    addMultiRoll([result], sides, modifier);
   }
 
   void clearHistory() {

@@ -28,24 +28,38 @@ class RollHistory extends StatelessWidget {
                 leading: CircleAvatar(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
-                  child: Text((entry.result + entry.modifier).toString()),
+                  child: Text(entry.total.toString()),
                 ),
                 title: Row( 
                   children: [
-                    Text('d${entry.sides}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    Text(
-                      DateFormat.jm().format(entry.timestamp),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                    Text(entry.diceCount > 1
+                      ? '${entry.diceCount}d${entry.sides}'
+                      : 'd${entry.sides}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                  ),
+                  const Spacer(),
+                  Text(
+                    DateFormat.jm().format(entry.timestamp),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
                     ),
-                  ],
-                ),
-                subtitle: Text(
-                    entry.modifier == 0 ? '${entry.result}' : '${entry.result} + ${entry.modifier}',
+                  ),
+                ],
+              ),
+              subtitle: Text(
+                entry.diceCount > 1
+                  ? 'Rolls: ${entry.diceResults.join(', ')}' +
+                    (entry.modifier != 0 ? ' + Mod: ${entry.modifier}' : '')
+                  : (entry.modifier != 0 
+                    ? 'Roll: ${entry.diceResults.isNotEmpty 
+                      ? entry.diceResults[0] 
+                      : 0
+                      } + Mod: ${entry.modifier}'
+                    : 'Roll: ${entry.diceResults.isNotEmpty 
+                      ? entry.diceResults[0] 
+                      : 0
+                      }'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),

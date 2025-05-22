@@ -6,6 +6,7 @@ import 'screens/settings_screen.dart';
 import 'providers/theme_provider.dart';
 import 'providers/sound_provider.dart';
 import 'providers/history_provider.dart';
+import 'providers/preset_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => soundProvider),
         ChangeNotifierProvider(create: (_) => historyProvider),
+        ChangeNotifierProvider(create: (_) => PresetProvider()),
       ],
       child: const MyApp(),
     ),
