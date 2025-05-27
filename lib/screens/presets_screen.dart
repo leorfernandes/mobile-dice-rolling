@@ -28,10 +28,8 @@ class PresetsScreen extends StatelessWidget {
               return ListTile(
                 title: Text(preset.name),
                 subtitle: Text(
-                  '${preset.count}d${preset.sides}' +
-                  (preset.modifier != 0
-                    ? ' + ${preset.modifier}'
-                    : ''),
+                  '${preset.diceSet}d${preset.diceSet}' // Needs to update for dice and sides
+                  '${preset.diceSet.modifier != 0 ? ' + ${preset.diceSet.modifier}' : ''}',
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),

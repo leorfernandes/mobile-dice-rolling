@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/dice.dart';
-import '../models/custom_buttons.dart';
+import 'dart:math';
+import '../models/dice_set.dart';
 import '../providers/sound_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/preset_provider.dart';
-import '../models/dice_preset.dart';
-import '../widgets/save_preset_dialog.dart';
 
 class DiceRoller extends StatefulWidget {
   const DiceRoller({super.key});
@@ -17,14 +15,267 @@ class DiceRoller extends StatefulWidget {
 
 class _DiceRollerState extends State<DiceRoller>{
   final List<int> _availableDice = [4, 6, 8, 10, 12, 20, 100];
-  int _selectedDiceSides = 6;
-  int _diceCount = 1;
-  List<int> _rollResults = [1];
-  int _modifier = 0;
+  DiceSet _diceSet = const DiceSet(dice: {});
+  Map<int, List<int>> _rollResults = {};
   bool _isRolling = false;
   final _modifierController = TextEditingController(text: '0');
 
+  @override
+  void initState() {
+    super.initState();
+    _modifierController.addListener(_updateModifier);
+  }
+
+  @override
+  void dispose() {
+    _modifierController.dispose();
+    super.dispose();
+  }
+
+  void _updateModifier() {
+    final value = int.tryParse(_modifierController.text) ?? 0;
+    setState(() {
+      _diceSet = _diceSet.copyWith(modifier: value);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Calculate total from all dice + modifier
+    int total = 0;
+    _rollResults.forEach((sides, results) {
+      total += results.fold<int>(0, (sum, roll) => sum + roll);
+    });
+    total += _diceSet.modifier;
+    
+    return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Dice type buttons
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: _availableDice.map((sides) {
+              final count = _diceSet.dice[sides] ?? 0;
+
+              return InputChip(
+                avatar: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  child: Text(count.toString()),
+                ),
+                label: Text('d$sides'),
+                onPressed: () {
+                  setState(() {
+                    _diceSet = _diceSet.addDie(sides);
+                  });
+                },
+                deleteIcon: const Icon(Icons.remove_circle_outline, size: 18),
+                onDeleted: count > 0
+                  ? () {
+                      setState(() {
+                        _diceSet = _diceSet.removeDie(sides);
+                      });
+                  }                
+                : null,
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 16), 
+
+          // Modifier input
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Modifier: '),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline),
+                onPressed: () {
+                  final value = (_diceSet.modifier - 1);
+                  _modifierController.text = value.toString();
+                },
+              ),
+              SizedBox(
+                width: 60,
+                child: TextField(
+                  controller: _modifierController,
+                  keyboardType: TextInputType.numberWithOptions(signed: true),
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline),
+                onPressed: () {
+                  final value = (_diceSet.modifier + 1);
+                  _modifierController.text = value.toString();
+                },
+              ),
+            ],
+          ),
+              
+          const SizedBox(height: 24),
+
+          // Results display
+          if (_rollResults.isNotEmpty)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withAlpha(25),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    total.toString(),
+                    style: Theme.of(context).textTheme.displayLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  // Show individual results for each die type
+                  ..._rollResults.entries.map((entry) {
+                    final sides = entry.key;
+                    final results = entry.value;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('d$sides: '),
+                          Wrap(
+                            spacing: 4,
+                            children: results.map((result) {
+                              return Chip(
+                                label: Text(result.toString()),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  if (_diceSet.modifier != 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('Modifier: ${_diceSet.modifier}'),
+                    ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 24),
+
+          // Roll button
+          ElevatedButton.icon(
+            onPressed: _diceSet.dice.isEmpty || _isRolling ? null : _rollDice,
+            icon: Icon(_isRolling ? Icons.hourglass_empty : Icons.casino),
+            label: Text(_isRolling ? 'Rolling...' : 'Roll Dice'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32,
+                vertical: 16,
+              ),
+            ),
+          ),
+
+          // Presets buttons
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Save preset button
+              ElevatedButton.icon(
+                onPressed: _diceSet.dice.isEmpty ? null : () {
+                  final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                  presetProvider.addPreset("Set", _diceSet);
+                },
+                icon: const Icon(Icons.save),
+                label: const Text('Save'),
+              ),
+              const SizedBox(width: 8),
+
+              // Load preset button
+              Consumer<PresetProvider>(
+                builder: (context, presetProvider, child) {
+                  final presets = presetProvider.presets;
+
+                  return PopupMenuButton<DiceSetPreset>(
+                    enabled: presets.isNotEmpty,
+                    tooltip: 'Load preset',
+                    onSelected: (preset) {
+                      setState(() {
+                        _diceSet = preset.diceSet;
+                        _modifierController.text = preset.diceSet.modifier.toString();
+                      });
+                    },
+                    itemBuilder: (context) {
+                      return [
+                        ...presets.map((preset) {
+                          return PopupMenuItem<DiceSetPreset>(
+                            value: preset,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        preset.name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        preset.diceSet.description,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, size:16),
+                                  onPressed: () {
+                                    presetProvider.deletePreset(preset.id);
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ];
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.folder_open),
+                          const SizedBox(width: 8),
+                          const Text('Load'),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+    );
+  }
+
   Future<void> _rollDice() async {
+    if (_diceSet.dice.isEmpty) return;
+
     setState(() {
       _isRolling = true;
     });
@@ -34,314 +285,30 @@ class _DiceRollerState extends State<DiceRoller>{
     await soundProvider.playRollSound();
 
     // Small delay to simulate rolling
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 3000));
   
     // Roll the dice
-    final dice = Dice(sides: _selectedDiceSides);
-    final results = dice.rollMultiple(_diceCount);
-    final total = results.fold<int>(0, (sum, roll) => sum + roll) + _modifier;
+    final Map<int, List<int>> results = {};
+    final random = Random();
 
+    // Roll each type die
+    _diceSet.dice.forEach((sides, count) {
+      final List<int> rolls = [];
+      for (int i = 0; i < count; i++) {
+        rolls.add(random.nextInt(sides) + 1);
+      }
+      results[sides] = rolls;
+    });
+  
+    // Apply modifier
     setState(() {
       _rollResults = results;
       _isRolling = false;
     });
 
     // Add to history
-    Provider.of<HistoryProvider>(context, listen: false).addMultiRoll(results, _selectedDiceSides, _modifier);
+    if (!mounted) return;
+    Provider.of<HistoryProvider>(context, listen: false)
+      .addCombinedRoll(results, _diceSet.modifier);
   }
-
-  @override
-  void dispose() {
-    _modifierController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Calculate total from all dice + modifier
-    final total = _rollResults.fold<int>(0, (sum, roll) => sum + roll) + _modifier;
-    
-    return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children:[
-              const Text('Dice:', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
-              DropdownButton<int>(
-                value: _selectedDiceSides,
-                items: _availableDice.map((sides) {
-                  return DropdownMenuItem<int>(
-                    value: sides,
-                    child: Text('d$sides'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedDiceSides = value!;
-                  });
-                },
-              ),
-            ],
-          ),
-
-          // Dice count selector
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Number of Dice: ', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline),
-                onPressed: _diceCount > 1
-                  ? () {
-                    setState(() {
-                      _diceCount--;
-                      _rollResults = List.generate(_diceCount, (_) => 1);
-                    });
-                  }
-                : null,
-              ),
-              Text(
-                '$_diceCount',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: _diceCount < 100
-                  ? () {
-                    setState(() {
-                      _diceCount++;
-                      _rollResults = List.generate(_diceCount, (_) => 1); 
-                    });
-                  }
-                : null,
-              ),
-            ],
-          ),
-
-          // Modifier input
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Modifier: ', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-
-                  // TextField for modifier input
-                  SizedBox(
-                    width: 60,
-                    child: TextField(
-                      controller: _modifierController,
-                      keyboardType: TextInputType.numberWithOptions(signed: true),
-                      decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          _modifier = int.tryParse(value) ?? 0;
-                        });
-                      },
-                    ),
-                  ),
-                  Column(
-                    children: [
-
-                      // Increment button
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () {
-                          setState(() {
-                            _modifier++;
-                            _modifierController.text = _modifier.toString();
-                          });
-                        },
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        padding: EdgeInsets.zero,
-                      ),
-
-                      // Decrement button
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () {
-                          setState(() {
-                            _modifier--;
-                            _modifierController.text = _modifier.toString();
-                          });
-                        },
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          // Save Preset Button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-
-              // Save current preset button
-              ElevatedButton.icon(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => SavePresetDialog(
-                      sides: _selectedDiceSides,
-                      count: _diceCount,
-                      modifier: _modifier,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.save),
-                label: const Text('Save'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                ),
-              ),
-
-              // Load presets button
-              Consumer<PresetProvider>(
-                builder: (context, presetProvider, child) {
-                  final presets = presetProvider.presets;
-
-                  return PopupMenuButton<DicePreset>(
-                    icon: const Icon(Icons.folder_open),
-                    tooltip: 'Load',
-                    enabled: presets.isNotEmpty,
-                    onSelected: (preset) {
-                      setState(() {
-                        _selectedDiceSides = preset.sides;
-                        _diceCount = preset.count;
-                        _modifier = preset.modifier;
-                        _modifierController.text = preset.modifier.toString();
-                        _rollResults = List.generate(_diceCount, (_) => 1);
-                      });
-                    },
-                    itemBuilder: (context) {
-                      return presets.map((preset) {
-                        return PopupMenuItem<DicePreset>(
-                          value: preset,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(preset.name),
-                              Text(
-                                '${preset.count}d${preset.sides}' +
-                                (preset.modifier != 0
-                                  ? ' + ${preset.modifier}'
-                                  : ''),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size: 16),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    presetProvider.deletePreset(preset.id);
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList();
-                      },
-                      );
-                    },
-                  )
-            ],
-          ),
-
-          // Roll button
-          ElevatedButton.icon(
-          onPressed: _isRolling ? null : _rollDice,
-          icon: Icon(_isRolling ? Icons.hourglass_empty : Icons.casino),
-          label: Text(_isRolling ? 'Rolling...' : 'Roll Dice'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(
-            horizontal: 32,
-            vertical: 16,
-            ),
-          ),
-        ),
-
-          const SizedBox(height: 10),
-
-          // Display the result
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                // Display total result
-                Text(
-                total.toString(),
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-
-              // Show formula if needed
-              if (_diceCount > 1 || _modifier != 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    _buildResultString(),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-
-              if (_diceCount > 1)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _rollResults.map((result) {
-                      return Chip(
-                        label: Text(result.toString()),
-                        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),          
-        ],
-      );
-    }
-
-    // Helper function to build result string
-    String _buildResultString() {
-      final parts = <String>[];
-
-      if (_diceCount > 1) {
-        parts.add('${_diceCount}d$_selectedDiceSides');
-        parts.add('${_rollResults.join(', ')}');
-      } else {
-        parts.add('1d$_selectedDiceSides');
-      }
-
-      if (_modifier > 0) {
-        parts.add('+ Mod: $_modifier');
-      } else if (_modifier < 0) {
-        parts.add('- Mod: ${_modifier.abs()}');
-      }
-
-      return parts.join(' ');
-    }
 }

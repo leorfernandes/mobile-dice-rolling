@@ -18,50 +18,49 @@ class RollHistory extends StatelessWidget {
           );
         }
         return ListView.builder(
-          shrinkWrap: true,
           itemCount: history.length,
           itemBuilder: (context, index) {
             final entry = history[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  child: Text(entry.total.toString()),
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              child: Text(entry.total.toString()),
+            ),
+            title: Row(
+              children: [
+                Text(
+                  entry.diceDescription,
+                  style: const TextStyle(fontWeight: FontWeight.bold)
                 ),
-                title: Row( 
-                  children: [
-                    Text(entry.diceCount > 1
-                      ? '${entry.diceCount}d${entry.sides}'
-                      : 'd${entry.sides}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)
+                const Spacer(),
+                Text(
+                  DateFormat.jm().format(entry.timestamp),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
                   ),
-                  const Spacer(),
-                  Text(
-                    DateFormat.jm().format(entry.timestamp),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                ),
+              ],
+            ),
+              subtitle: Wrap(
+                spacing: 4,
+                children: [
+                  ...entry.diceResults.entries.map((e) {
+                    return Chip(
+                      label: Text(
+                        'D${e.key}: [${e.value.join(', ')}]',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    );
+                  }),
+                  if (entry.modifier != 0)
+                    Chip(
+                      label: Text('Mod: ${entry.modifier}'),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                  ),
                 ],
-              ),
-              subtitle: Text(
-                entry.diceCount > 1
-                  ? 'Rolls: ${entry.diceResults.join(', ')}' +
-                    (entry.modifier != 0 ? ' + Mod: ${entry.modifier}' : '')
-                  : (entry.modifier != 0 
-                    ? 'Roll: ${entry.diceResults.isNotEmpty 
-                      ? entry.diceResults[0] 
-                      : 0
-                      } + Mod: ${entry.modifier}'
-                    : 'Roll: ${entry.diceResults.isNotEmpty 
-                      ? entry.diceResults[0] 
-                      : 0
-                      }'),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
               ),
             );
           },

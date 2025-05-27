@@ -52,10 +52,9 @@ class HistoryProvider with ChangeNotifier {
   }
 
   // Add a new roll entry
-  void addMultiRoll (List<int> results, int sides, [int modifier = 0]) {
+  void addCombinedRoll(Map<int, List<int>> results, int sides, [int modifier = 0]) {
     _history.insert(0, RollEntry(
-      diceResults: List.from(results),
-      sides: sides,
+      diceResults: Map<int, List<int>>.from(results),
       modifier: modifier,
       timestamp: DateTime.now(),
     ));
@@ -66,10 +65,6 @@ class HistoryProvider with ChangeNotifier {
 
     _saveHistory();
     notifyListeners();
-  }
-
-  void addRoll (int result, int sides, [int modifier = 0]) {
-    addMultiRoll([result], sides, modifier);
   }
 
   void clearHistory() {

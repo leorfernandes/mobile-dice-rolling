@@ -1,16 +1,22 @@
-class DicePreset {
-  final String id;
-  final String name;
-  final int sides;
-  final int count;
-  final int modifier;
+class DiceSet {
+  Map<int, int> dice;
+  int modifier;
 
-  const DicePreset({
+  DiceSet({
+    required this.dice,
+    required this.modifier,
+  });
+}
+
+class DiceSetPreset {
+  String id;
+  String name;
+  DiceSet diceSet;
+
+  DiceSetPreset({
     required this.id,
     required this.name,
-    required this.sides,
-    required this.count,
-    this.modifier = 0,
+    required this.diceSet,
   });
 
   // Convert to JSON for storage
@@ -18,20 +24,28 @@ class DicePreset {
     return {
       'id': id,
       'name': name,
-      'sides': sides,
-      'count': count,
-      'modifier': modifier,
+      'sides': {
+        'dice': diceSet.dice.map((key, value) => MapEntry(key.toString(), value)),
+        'modifier': diceSet.modifier,
+      },
     };
   }
 
   // Create from JSON for retrieval
-  factory DicePreset.fromJson(Map<String, dynamic> json) {
-    return DicePreset(
+  factory DiceSetPreset.fromJson(Map<String, dynamic> json) {
+    final diceSetData = json['diceSet'] as Map<String, dynamic>;
+    final diceData = diceSetData['dice'] as Map<String, dynamic>;
+
+    final dice = diceData.map((key, value) =>
+        MapEntry(int.parse(key), value as int));
+        
+    return DiceSetPreset(
       id: json['id'] as String,
       name: json['name'] as String,
-      sides: json['sides'] as int,
-      count: json['count'] as int,
-      modifier: (json['modifier'] as int?) ?? 0,
+      diceSet: DiceSet(
+        dice: dice,
+        modifier: diceSetData['modifier'] as int,
+      ),
     );
   }
 }
