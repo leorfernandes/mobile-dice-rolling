@@ -73,27 +73,31 @@ class HomeScreen extends StatelessWidget {
       
       // Main content
       
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Card(
-                    elevation: 4,
-                    child: Container(
-                      padding: EdgeInsets.all(16.0),
-                      child: DiceRoller(),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Card(
+                        elevation: 4,
+                        child: Container(
+                          padding: EdgeInsets.all(16.0),
+                          child: DiceRoller(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ]
+                  ]
+                )
+              )
             )
-          )
-        )
+          ),
+        ],
       ),
       floatingActionButton: Builder(
         builder: (context) => FloatingActionButton(

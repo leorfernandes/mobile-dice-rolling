@@ -5,6 +5,7 @@ import '../models/dice_set.dart';
 import '../providers/sound_provider.dart';
 import '../providers/history_provider.dart';
 import '../providers/preset_provider.dart';
+import 'dice_roll_animation.dart';
 
 class DiceRoller extends StatefulWidget {
   const DiceRoller({super.key});
@@ -273,8 +274,11 @@ class _DiceRollerState extends State<DiceRoller>{
     );
   }
 
+  bool _showingAnimation = false;
+
   Future<void> _rollDice() async {
-    if (_diceSet.dice.isEmpty) return;
+    if (_diceSet.dice.isEmpty || _isRolling ) return;
+
 
     setState(() {
       _isRolling = true;
@@ -283,9 +287,6 @@ class _DiceRollerState extends State<DiceRoller>{
     // Play sound
     final soundProvider = Provider.of<SoundProvider>(context, listen: false);
     await soundProvider.playRollSound();
-
-    // Small delay to simulate rolling
-    await Future.delayed(const Duration(milliseconds: 3000));
   
     // Roll the dice
     final Map<int, List<int>> results = {};
@@ -300,15 +301,37 @@ class _DiceRollerState extends State<DiceRoller>{
       results[sides] = rolls;
     });
   
-    // Apply modifier
+    // Show the animation overlay
     setState(() {
-      _rollResults = results;
-      _isRolling = false;
+      _showingAnimation = true;
     });
 
-    // Add to history
-    if (!mounted) return;
-    Provider.of<HistoryProvider>(context, listen: false)
-      .addCombinedRoll(results, _diceSet.modifier);
+    // Declare the entry variable before defining it
+    late OverlayEntry entry;
+    
+    // The animation will call _finishRoll when complete
+    entry = OverlayEntry(
+      builder: (context) => DiceRollAnimation(
+        results: results,
+        modifier: _diceSet.modifier,
+        onComplete: () {
+          setState(() {
+            _rollResults = results;
+            _isRolling = false;
+            _showingAnimation = false;
+          });
+
+          entry.remove();
+
+          // Add to history
+          if (mounted) {
+            Provider.of<HistoryProvider>(context, listen: false)
+              .addCombinedRoll(results, _diceSet.modifier);
+          }
+        },
+      ),
+    );
+
+    Overlay.of(context).insert(entry);
   }
 }
