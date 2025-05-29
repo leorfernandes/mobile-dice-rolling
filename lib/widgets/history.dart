@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/history_provider.dart';
 import 'package:intl/intl.dart';
+import '../screens/roll_detail_screen.dart';
 
 class RollHistory extends StatelessWidget {
   const RollHistory({super.key});
@@ -21,19 +22,42 @@ class RollHistory extends StatelessWidget {
           itemCount: history.length,
           itemBuilder: (context, index) {
             final entry = history[index];
-            return ListTile(
+
+            // Swipe action
+            return Dismissible(
+              key: ValueKey(entry.timestamp.millisecondsSinceEpoch),
+              direction: DismissDirection.startToEnd,
+              background: Container(
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: const Icon(
+                  Icons.info_outline,
+                  color: Colors.blue,
+                ),
+              ),
+              confirmDismiss: (direction) async {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => RollDetailScreen(rollEntry: entry),
+                  ),
+                );
+                return false;
+              },
+              child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              child: Text(entry.total.toString()),
+                foregroundColor: Colors.white,
+               child: Text(entry.total.toString()),
             ),
             title: Row(
               children: [
-                Text(
-                  entry.diceDescription,
-                  style: const TextStyle(fontWeight: FontWeight.bold)
+                Expanded(
+                    child: Text(
+                    entry.diceDescription,
+                    style: const TextStyle(fontWeight: FontWeight.bold)
+                  ),
                 ),
-                const Spacer(),
                 Text(
                   DateFormat.jm().format(entry.timestamp),
                   style: TextStyle(
@@ -43,24 +67,23 @@ class RollHistory extends StatelessWidget {
                 ),
               ],
             ),
-              subtitle: Wrap(
-                spacing: 4,
-                children: [
-                  ...entry.diceResults.entries.map((e) {
-                    return Chip(
-                      label: Text(
-                        'D${e.key}: [${e.value.join(', ')}]',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    );
-                  }),
-                  if (entry.modifier != 0)
-                    Chip(
-                      label: Text('Mod: ${entry.modifier}'),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                ],
+            subtitle: Text(
+              'Swipe right for details',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            onTap: () {
+              // Tap to view details
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => RollDetailScreen(rollEntry: entry),
+                )
+              );
+            }
+  
               ),
             );
           },

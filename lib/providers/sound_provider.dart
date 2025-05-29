@@ -11,13 +11,11 @@ class SoundProvider with ChangeNotifier {
   Future<void> initializeSound() async {
     if (!_isInitialized) {
       try {
-        debugPrint('Initalizing sound...');// Debugging
         await _player.setAsset('sounds/dice_roll.mp3');
         _isInitialized = true; // Debugging
-        debugPrint('Sound initialized successfully'); // Debugging
-      } catch (e) { // Debugging
+      } catch (e) {
         debugPrint('Error initalizing sound: $e'); // Debugging
-        _isInitialized = false; // Debugging
+        _isInitialized = false;
         }
     }
   }
@@ -31,14 +29,12 @@ class SoundProvider with ChangeNotifier {
     if (!_isSoundEnabled) return;
 
     try {
-      debugPrint('Attempting to play sound...'); // Debugging
       if (!_isInitialized) {
         await initializeSound();
       }
       await _player.stop(); // Stop any currently playing sound
       await _player.seek(Duration.zero); // Seek to the beginning
       await _player.play(); // Play the sound
-      debugPrint('Sound played successfully'); // Debugging
     } catch (e) {
       debugPrint('Error playing sound: $e'); // Debugging
     }

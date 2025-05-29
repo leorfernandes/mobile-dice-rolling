@@ -1,16 +1,77 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:flutter_svg/flutter_svg.dart';
+
+class DiceColorScheme {
+  final Color d4;
+  final Color d6;
+  final Color d8;
+  final Color d10;
+  final Color d12;
+  final Color d20;
+  final Color d100;
+  final Color defaultDice;
+
+  const DiceColorScheme({
+    required this.d4,
+    required this.d6,
+    required this.d8,
+    required this.d10,
+    required this.d12,
+    required this.d20,
+    required this.d100,
+    required this.defaultDice,
+  });
+
+  // Predefined themes
+  static const DiceColorScheme vibrant = DiceColorScheme(
+    d4: Color(0xFFD32F2F),     // Bright red
+    d6: Color(0xFF1976D2),     // Bright blue
+    d8: Color(0xFF388E3C),     // Bright green
+    d10: Color(0xFFFFA000),    // Amber
+    d12: Color(0xFF7B1FA2),    // Purple
+    d20: Color(0xFF0097A7),    // Teal
+    d100: Color(0xFFE64A19),   // Deep orange
+    defaultDice: Color(0xFF616161), // Grey
+  );
+
+  // Dark theme
+  static const DiceColorScheme dark = DiceColorScheme(
+    d4: Color(0xFF8B0000),     // Dark red
+    d6: Color(0xFF0D47A1),     // Dark blue
+    d8: Color(0xFF1B5E20),     // Dark green
+    d10: Color(0xFFFF6F00),    // Dark amber
+    d12: Color(0xFF4A148C),    // Dark purple
+    d20: Color(0xFF006064),    // Dark teal
+    d100: Color(0xFFBF360C),   // Dark orange
+    defaultDice: Color(0xFF424242), // Dark grey
+  );
+
+  // Light theme
+  static const DiceColorScheme light = DiceColorScheme(
+    d4: Color(0xFFFFCDD2),     // Light red
+    d6: Color(0xFFBBDEFB),     // Light blue
+    d8: Color(0xFFC8E6C9),     // Light green
+    d10: Color(0xFFFFECB3),    // Light amber
+    d12: Color(0xFFE1BEE7),    // Light purple
+    d20: Color(0xFFB2EBF2),    // Light teal
+    d100: Color(0xFFFFCCBC),   // Light orange
+    defaultDice: Color(0xFFEEEEEE), // Light grey
+  );
+}
 
 class DiceRollAnimation extends StatefulWidget {
   final Map<int, List<int>> results;
   final int modifier;
   final VoidCallback onComplete;
+  final bool showFinalResults;
 
   const DiceRollAnimation({
     super.key,
     required this.results,
     required this.modifier,
     required this.onComplete,
+    this.showFinalResults = false,
   });
 
   @override
@@ -18,8 +79,10 @@ class DiceRollAnimation extends StatefulWidget {
 }
 
 class _DiceRollAnimationState extends State<DiceRollAnimation>
-  with SingleTickerProviderStateMixin {
+  with TickerProviderStateMixin {
     late AnimationController _controller;
+    late AnimationController _pulseController;
+    late Animation<double> _pulseAnimation;
     late Random _random;
     int _displayNumber = 1;
     int _finalTotal = 0;
@@ -77,15 +140,24 @@ class _DiceRollAnimationState extends State<DiceRollAnimation>
                   visual.moveAlongPath(_controller.value);
 
                   // Random scale for bouncing effect
-                  visual.scale = 1 + _random.nextDouble() * 0.4;
+                  visual.updateRotation(_controller.value);
 
-                  if (_controller.value > 0.5) {
-                    visual.speed = visual.speed * (1.0 - (_controller.value - 0.5) * 0.5);
-                    visual.rotation += visual.speed;
-                  } else {
-                    visual.speed = 0.2 + _random.nextDouble() * 0.3;
-                    visual.rotation += visual.speed;
-                  }
+                  // Scale bouncing effect - higer when the die is in the air
+                  final pathProgress = _controller.value * 0.8;
+                  final pathIndex = (visual.path.length * pathProgress).floor().clamp(0, visual.path.length - 1);
+                  final nextIndex = min(pathIndex + 1, visual.path.length - 1);
+
+                  // Calculate if die is going up or down (using y-coordinate)
+                  final isGoingUp = pathIndex > 0 &&
+                    visual.path[pathIndex].dy > visual.path[pathIndex - 1].dy;
+
+                  // Make the scale larger when the die is higher in the air
+                  final currentY = visual.position.dy;
+                  final initialY = visual.path[0].dy;
+                  final heightDiff = (initialY - currentY).abs();
+
+                  // Scale effect is more pronounced when die is higher
+                  visual.scale = 1.0 + heightDiff * 3.0;
 
                   // Show random number during animation
                   visual.result = _random.nextInt(sides) + 1;
@@ -112,33 +184,77 @@ class _DiceRollAnimationState extends State<DiceRollAnimation>
 
       _controller.addStatusListener((status) {
         if (status == AnimationStatus.completed) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            widget.onComplete();
+          setState(() {
+            _animationComplete = true;
           });
         }
       });
 
       // Start the animation
       _controller.forward();
+
+      _pulseController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1000),
+      )..repeat(reverse: true);
+
+      _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(_pulseController);
     }
+
+    bool _animationComplete = false;
 
     @override
     void dispose() {
+      _pulseController.dispose();
       _controller.dispose();
       super.dispose();
     }
-
     // Get icon for a specific die type
-    IconData getDiceIcon(int sides) {
+    Widget getDiceIcon(int sides, double size) {
       switch (sides) {
-        case 4: return Icons.change_history; // Triangle for d4
-        case 6: return Icons.square; // Square for d6
-        case 8: return Icons.hexagon; // Hexagon for d8
-        case 10: return Icons.pentagon; // Pentagon for d10
-        case 12: return Icons.dangerous; // Hexagon for d12
-        case 20: return Icons.diamond_rounded; // Comples shape for d220
-        case 100: return Icons.circle; // Circle for d100
-        default: return Icons.casino; // Default dice icon for any other value
+        case 4: return SvgPicture.asset(
+          'assets/icons/dice-d4.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        ); // d4 Icon
+        case 6: return SvgPicture.asset(
+          'assets/icons/dice-d6.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        ); // d6 Icon
+        case 8: return SvgPicture.asset(
+          'assets/icons/dice-d8.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        ); // d8 Icon
+        case 10: return SvgPicture.asset(
+          'assets/icons/dice-d10.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        ); // d10 Icon
+        case 12: return SvgPicture.asset(
+          'assets/icons/dice-d12.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        ); // d12 Icon
+        case 20: return SvgPicture.asset(
+          'assets/icons/dice-d20.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        ); // d20 Icon
+        case 100: return SvgPicture.asset(
+          'assets/icons/dice-d20.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        default: return Icon(Icons.casino, size: size, color: _getDiceColor(0).withOpacity(0.9)); // Default dice icon for any other value
       }
     }
 
@@ -146,7 +262,14 @@ class _DiceRollAnimationState extends State<DiceRollAnimation>
     Widget build(BuildContext context) {
       final Size screenSize = MediaQuery.of(context).size;
 
-      return AnimatedBuilder(
+  
+      return GestureDetector(
+        onTap: () {
+          if (_animationComplete) {
+            widget.onComplete();
+          }
+        },
+      child: AnimatedBuilder(
         animation: _controller,
         builder: (context, childer) {
           return Stack(
@@ -169,29 +292,23 @@ class _DiceRollAnimationState extends State<DiceRollAnimation>
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // The die icon
-                          Icon (
-                            getDiceIcon(sides),
-                            size: 50 + (visual.scale * 20),
-                            color: _getDiceColor(sides).withOpacity(0.9),
-                          ),
-
-                          // The result number shown inside the die
-                          Text(
-                            visual.result.toString(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black,
-                                  blurRadius: 2,
-                                  offset: const Offset(1, 1),
+                          Container(
+                            width: 70 + (visual.scale * 20),
+                            height: 70 + (visual.scale * 20),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 10 + visual.scale * 5,
+                                  offset: Offset(0, 5 + visual.scale * 2),
+                                  spreadRadius: 1,
                                 ),
                               ],
-                            )
+                            ),
                           ),
+                          // The die icon
+                          getDiceIcon(sides, 50 + (visual.scale * 20)),
                         ],
                       ),
                     ),
@@ -230,23 +347,66 @@ class _DiceRollAnimationState extends State<DiceRollAnimation>
                   ),
                 ),
               ),
-          ],
-          );
-        },
+
+            if (_animationComplete)
+              Positioned(
+                bottom: 40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation:_pulseAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _pulseAnimation.value,
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.touch_app, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Tap anywhere to continue',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                      ),
+                    ),
+                      ],
+                  ),
+                ),
+              ),
+                ),
+              ),
+            ],
+            );
+          },
+        ),
       );
     }
+
+  // Current color scheme
+  final colorScheme = DiceColorScheme.vibrant;
 
   // Get color based on die type
     Color _getDiceColor(int sides) {
       switch(sides) {
-        case 4: return Colors.red.shade800;
-        case 6: return Colors.blue.shade800;
-        case 8: return Colors.green.shade800;
-        case 10: return Colors.amber.shade800;
-        case 12: return Colors.purple.shade800;
-        case 20: return Colors.teal.shade800;
-        case 100: return Colors.deepOrange.shade800;
-        default: return Colors.grey.shade800;
+        case 4: return colorScheme.d4;
+        case 6: return colorScheme.d6;
+        case 8: return colorScheme.d8;
+        case 10: return colorScheme.d10;
+        case 12: return colorScheme.d12;
+        case 20: return colorScheme.d20;
+        case 100: return colorScheme.d100;
+        default: return colorScheme.defaultDice;
       }
     }
   } 
@@ -259,8 +419,9 @@ class DiceVisual {
   int result;
   late List<Offset> path; // Path for the die to follow
   int pathIndex = 0; // Current position in the path
-  double speed = 0.0; // Current speed
-  double deceleration = 0.01; // How quickly it slows down
+  late double initialSpeed;
+  late double currentSpeed;
+  late double decelaration;
 
   DiceVisual({
     required this.position,
@@ -270,8 +431,14 @@ class DiceVisual {
   }) {
     // Generate a random path for this die
     path = _generateRandomPath();
+
+    // Set initial physics properties
+    final random = Random();
+    initialSpeed = 0.3 + random.nextDouble() * 0.4;
+    currentSpeed = initialSpeed;
+    decelaration = 0.01 + random.nextDouble() * 0.02; 
   }
-  
+
   // Generate a random path with multiple points
   List<Offset> _generateRandomPath() {
     final Random random = Random();
@@ -280,12 +447,36 @@ class DiceVisual {
     // Start at current position
     points.add(position);
 
-    // Add6-10 random waypoints
-    final int numPoints = random.nextInt(5) + 6;
+    // Generate random points along the path
+    final int numPoints = random.nextInt(3) + 4; // Between 4 and 6 points
+
+    // Target destination
+    final targetX = 0.1 + random.nextDouble() * 0.8;
+    final targetY = 0.1 + random.nextDouble() * 0.8;
+    
     for (int i=0; i < numPoints; i++) {
+      // Distribute points along the path with some randomness
+      final progress = (i + 1) / numPoints;
+
+      // Higher in the first half, then gradually settling
+      double bounceHeight;
+      if (progress < 0.6) {
+        // Higher bounces at the beginning
+        bounceHeight = (1.0 - progress) * (0.2 + random.nextDouble() * 0.8);
+      } else {
+        // Smaller bounces at the end
+        bounceHeight = (1.0 - progress) * (0.1 + random.nextDouble() * 0.4);
+      }
+
+      // Apply bounce using sine wave pattern
+      final verticalOffset = -bounceHeight * sin(progress * 3 * pi);
+
+      // Add some curves to make it look like it's bouncing/rolling
+      final deviation = (1 - progress) * (random.nextDouble() * 0.2 - 0.1);
+      
       points.add(Offset(
-        0.1 + random.nextDouble() * 0.8,
-        0.1 + random.nextDouble() * 0.8, 
+        position.dx + (targetX - position.dx) * progress + deviation,
+        position.dy + (targetY - position.dy) * progress + verticalOffset,  
       ));
     }
 
@@ -312,5 +503,21 @@ class DiceVisual {
       start.dx + (end.dx - start.dx) * segmentProgress,
       start.dy + (end.dy - start.dy) * segmentProgress,
     );
+  }
+
+  void updateRotation(double progress) {
+    // Fast at first, then gradually slow down
+    if (progress < 0.1) {
+      // Initial acceleration
+      currentSpeed = initialSpeed * (1 + progress * 5);
+    } else {
+      // Gradual decelation
+      currentSpeed = max(0.05, initialSpeed * (1.0 - (progress - 0.1) / 0.9));
+    }
+
+    // Add different rotation axes
+    final random = Random();
+
+    rotation += currentSpeed * (1 + random.nextDouble() * 0.5);
   }
 }  

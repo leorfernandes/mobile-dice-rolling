@@ -122,58 +122,6 @@ class _DiceRollerState extends State<DiceRoller>{
               
           const SizedBox(height: 24),
 
-          // Results display
-          if (_rollResults.isNotEmpty)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    total.toString(),
-                    style: Theme.of(context).textTheme.displayLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  // Show individual results for each die type
-                  ..._rollResults.entries.map((entry) {
-                    final sides = entry.key;
-                    final results = entry.value;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('d$sides: '),
-                          Wrap(
-                            spacing: 4,
-                            children: results.map((result) {
-                              return Chip(
-                                label: Text(result.toString()),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  if (_diceSet.modifier != 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text('Modifier: ${_diceSet.modifier}'),
-                    ),
-                ],
-              ),
-            ),
-
-          const SizedBox(height: 24),
-
           // Roll button
           ElevatedButton.icon(
             onPressed: _diceSet.dice.isEmpty || _isRolling ? null : _rollDice,
