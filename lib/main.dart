@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 import 'screens/settings_screen.dart';
 import 'providers/theme_provider.dart';
 import 'providers/sound_provider.dart';
@@ -14,9 +14,6 @@ void main() async {
   // Create Providers
   final historyProvider = HistoryProvider();
   final soundProvider = SoundProvider();
-
-  // Initialize
-  await soundProvider.initializeSound(); 
 
   runApp(
     MultiProvider(
@@ -48,8 +45,7 @@ class MyApp extends StatelessWidget {
           ),
           initialRoute: '/',
           routes: {
-            '/': (context) => const HomeScreen(),
-            '/settings': (context) => const SettingsScreen(),
+            '/': (context) => const MainScreen(),
           }
         );
       },

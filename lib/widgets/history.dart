@@ -23,7 +23,7 @@ class RollHistory extends StatelessWidget {
           itemBuilder: (context, index) {
             final entry = history[index];
 
-            // Swipe action
+            // Tap action
             return Dismissible(
               key: ValueKey(entry.timestamp.millisecondsSinceEpoch),
               direction: DismissDirection.startToEnd,
@@ -36,14 +36,6 @@ class RollHistory extends StatelessWidget {
                   color: Colors.blue,
                 ),
               ),
-              confirmDismiss: (direction) async {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => RollDetailScreen(rollEntry: entry),
-                  ),
-                );
-                return false;
-              },
               child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: Theme.of(context).primaryColor,

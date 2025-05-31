@@ -1,48 +1,60 @@
-import 'package:flutter/foundation.dart';
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:just_audio/just_audio.dart';
 
 class SoundProvider with ChangeNotifier {
-  final _player = AudioPlayer();
-  bool _isSoundEnabled = true;
-  bool _isInitialized = false; // Debugging
+  bool _soundEnabled = true;
+  double _volume = 0.7;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
-  bool get isSoundEnabled => _isSoundEnabled;
-
-  Future<void> initializeSound() async {
-    if (!_isInitialized) {
-      try {
-        await _player.setAsset('sounds/dice_roll.mp3');
-        _isInitialized = true; // Debugging
-      } catch (e) {
-        debugPrint('Error initalizing sound: $e'); // Debugging
-        _isInitialized = false;
-        }
-    }
+  SoundProvider() {
+    _loadPreferences();
   }
 
+  bool get soundEnabled => _soundEnabled;
+  double get volume => _volume;
+
   void toggleSound() {
-    _isSoundEnabled = !_isSoundEnabled;
+    _soundEnabled = !_soundEnabled;
+    _savePreferences();
+    notifyListeners();
+  }
+
+  void setVolume(double value) {
+    _volume = value;
+    _audioPlayer.setVolume(value);
+    _savePreferences();
     notifyListeners();
   }
 
   Future<void> playRollSound() async {
-    if (!_isSoundEnabled) return;
+    if (!_soundEnabled) return;
 
     try {
-      if (!_isInitialized) {
-        await initializeSound();
-      }
-      await _player.stop(); // Stop any currently playing sound
-      await _player.seek(Duration.zero); // Seek to the beginning
-      await _player.play(); // Play the sound
+      await _audioPlayer.setAsset('assets/sounds/roll_sound.mp3');
+      await _audioPlayer.setVolume(_volume);
+      await _audioPlayer.play();
     } catch (e) {
-      debugPrint('Error playing sound: $e'); // Debugging
+      print('Error playing sound: $e');
     }
   }
 
-  @override
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    _soundEnabled = prefs.getBool('soundEnabled') ?? true;
+    _volume = prefs.getDouble('volume') ?? 0.7;
+    notifyListeners();
+  }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setBool('soundEnabled', _soundEnabled);
+    prefs.setDouble('soundVolume', _volume);
+  }
+
   void dispose() {
-    _player.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 }

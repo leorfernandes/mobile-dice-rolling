@@ -5,7 +5,7 @@ import '../providers/sound_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,7 +27,7 @@ class SettingsScreen extends StatelessWidget {
               SwitchListTile(
                 secondary: const Icon(Icons.volume_up),
                 title: Text('Sound Effects'),
-                value: soundProvider.isSoundEnabled,
+                value: soundProvider.soundEnabled,
                 onChanged: (_) => soundProvider.toggleSound(),
               ),
             ],
