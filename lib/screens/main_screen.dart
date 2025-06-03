@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/dice_roller.dart';
 import '../widgets/history.dart';
 import '../widgets/settings.dart';
+import '../screens/presets_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -59,6 +60,9 @@ class _MainScreenState extends State<MainScreen> {
 
               // Your history screen
               RollHistory(),
+
+              // Presets Screen
+              PresetsScreen(),
             ],
           ),
           
@@ -165,6 +169,49 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
 
+           if (_currentPage == 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+               onTap: () {
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) => const PresetsScreen(),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          const begin = Offset(0.0, 1.0);
+                          const end = Offset.zero;
+                          const curve = Curves.easeInOut;
+
+                          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                          var offsetAnimation = animation.drive(tween);
+
+                          return SlideTransition(position: offsetAnimation, child: child);
+                        },
+                      ),
+                    );
+                  },
+                child: Container(
+                  width: 40,
+                  color: Colors.transparent,
+                  child: Center(
+                    child: RotatedBox(
+                      quarterTurns: 0,
+                      child: Text(
+                        'PRESETS',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor.withOpacity(0.5),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // Right side tap area (only visible on history page)
             if (_currentPage == 2)
               Positioned(
@@ -198,6 +245,39 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
               ),
+
+            if (_currentPage == 3)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: GestureDetector(
+               onTap: () {
+                    _pageController.animateToPage(
+                      1, // Navigate to roller page
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                child: Container(
+                  width: 40,
+                  color: Colors.transparent,
+                  child: Center(
+                    child: RotatedBox(
+                      quarterTurns: 0,
+                      child: Text(
+                        'ROLLER',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor.withOpacity(0.5),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       // bottom navigation for even easier navigation
@@ -223,6 +303,10 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.history),
             label: 'History',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.save),
+            label: 'Presets',
+          ),
         ]
       )
     );
@@ -234,6 +318,7 @@ class _MainScreenState extends State<MainScreen> {
       case 0: return 'Settings';
       case 1: return 'Dice Roller';
       case 2: return 'Roll History';
+      case 3: return 'Saved Presets';
       default: return 'Dice Roller';
     }
   }
@@ -243,6 +328,7 @@ class _MainScreenState extends State<MainScreen> {
       case 0: return Icons.casino;
       case 1: return Icons.history;
       case 2: return Icons.settings;
+      case 3: return Icons.save;
       default: return Icons.casino;
     }
   }

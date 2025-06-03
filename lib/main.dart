@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'screens/main_screen.dart';
-import 'screens/settings_screen.dart';
 import 'providers/theme_provider.dart';
 import 'providers/sound_provider.dart';
 import 'providers/history_provider.dart';
 import 'providers/preset_provider.dart';
+import 'providers/dice_set_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +22,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => soundProvider),
         ChangeNotifierProvider(create: (_) => historyProvider),
         ChangeNotifierProvider(create: (_) => PresetProvider()),
+        ChangeNotifierProvider(create: (_) => DiceSetProvider()),
       ],
       child: const MyApp(),
     ),

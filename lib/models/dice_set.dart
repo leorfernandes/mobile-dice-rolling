@@ -59,4 +59,21 @@ class DiceSet {
 
     return parts.join(' ');
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'dice': dice,
+      'modifier': modifier,
+    };
+  }
+
+  factory DiceSet.fromMap(Map<String, dynamic> map) {
+    final diceMap = Map<int, int>.from(
+      map['dice'].map((key, value) => MapEntry(int.parse(key.toString()), value as int)));
+    
+    return DiceSet(
+      dice: diceMap,
+      modifier: map['modifier'],
+    );
+  }
 }
