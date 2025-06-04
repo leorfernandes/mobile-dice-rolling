@@ -60,7 +60,7 @@ class RollHistory extends StatelessWidget {
               ],
             ),
             subtitle: Text(
-              'Swipe right for details',
+              'Tap for details',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],

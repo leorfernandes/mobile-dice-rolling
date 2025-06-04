@@ -49,176 +49,149 @@ class _DiceRollerState extends State<DiceRoller>{
     });
     total += _diceSet.modifier;
     
-    return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Dice type buttons
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: _availableDice.map((sides) {
-              final count = _diceSet.dice[sides] ?? 0;
-
-              return InputChip(
-                avatar: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  child: Text(count.toString()),
-                ),
-                label: Text('d$sides'),
-                onPressed: () {
-                  setState(() {
-                    _diceSet = _diceSet.addDie(sides);
-                  });
-                },
-                deleteIcon: const Icon(Icons.remove_circle_outline, size: 18),
-                onDeleted: count > 0
-                  ? () {
-                      setState(() {
-                        _diceSet = _diceSet.removeDie(sides);
-                      });
-                  }                
-                : null,
-              );
-            }).toList(),
-          ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Main content row with two columns
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Column(
+                                    spacing: 8,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: _availableDice.map((sides) {
+                                      final count = _diceSet.dice[sides] ?? 0;
+                                      return InputChip(
+                                        avatar: CircleAvatar(
+                                          backgroundColor: Theme.of(context).primaryColor,
+                                          foregroundColor: Colors.white,
+                                          child: Text(count.toString()),
+                                        ),
+                                        label: Text('d$sides'),
+                                        onPressed: () {
+                                          setState(() {
+                                            _diceSet = _diceSet.addDie(sides);
+                                          });
+                                        },
+                                        deleteIcon: const Icon(Icons.remove_circle_outline, size: 18),
+                                          onDeleted: count > 0
+                                            ? () {
+                                                setState(() {
+                                                  _diceSet = _diceSet.removeDie(sides);
+                                                });
+                                            }                
+                                          : null,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                               ), 
+                               ),
+                            ),
 
           const SizedBox(height: 16), 
 
-          // Modifier input
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Modifier: '),
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline),
-                onPressed: () {
-                  final value = (_diceSet.modifier - 1);
-                  _modifierController.text = value.toString();
-                },
-              ),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  controller: _modifierController,
-                  keyboardType: TextInputType.numberWithOptions(signed: true),
-                  textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    border: OutlineInputBorder(),
-                  ),
+          // Rigt Column - Modifier and Save
+          Expanded(
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Modifier Controls
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: () {
+                            final value = (_diceSet.modifier - 1);
+                            _modifierController.text = value.toString();
+                          },
+                        ),
+                      SizedBox(
+                        width: 60,
+                        child: TextField(
+                          controller: _modifierController,
+                          keyboardType: TextInputType.numberWithOptions(signed: true),
+                          textAlign: TextAlign.center,
+                          decoration: const InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: () {
+                          final value = (_diceSet.modifier + 1);
+                          _modifierController.text = value.toString();
+                        },
+                      ),
+                    ],
+                  ),        
+                  ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: () {
-                  final value = (_diceSet.modifier + 1);
-                  _modifierController.text = value.toString();
-                },
-              ),
-            ],
-          ),
-              
-          const SizedBox(height: 24),
-
-          // Roll button
-          ElevatedButton.icon(
-            onPressed: _diceSet.dice.isEmpty || _isRolling ? null : _rollDice,
-            icon: Icon(_isRolling ? Icons.hourglass_empty : Icons.casino),
-            label: Text(_isRolling ? 'Rolling...' : 'Roll Dice'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
-              ),
+              ],
             ),
           ),
 
-          // Presets buttons
           const SizedBox(height: 16),
+
+          //Buttons row at the bottom
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Save preset button
-              ElevatedButton.icon(
-                onPressed: _diceSet.dice.isEmpty ? null : () {
-                  final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-                  presetProvider.addPreset("Set", _diceSet);
-                },
-                icon: const Icon(Icons.save),
-                label: const Text('Save'),
+            // Save button
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: _diceSet.dice.isEmpty ? null : () {
+                    final presetProvider = Provider.of<PresetProvider>(context, listen: false);
+                    presetProvider.addPreset("Set", _diceSet);
+                  },
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                    )
+                  )
+                ),
               ),
-              const SizedBox(width: 8),
+            ),
 
-              // Load preset button
-              Consumer<PresetProvider>(
-                builder: (context, presetProvider, child) {
-                  final presets = presetProvider.presets;
-
-                  return PopupMenuButton<DiceSetPreset>(
-                    enabled: presets.isNotEmpty,
-                    tooltip: 'Load preset',
-                    onSelected: (preset) {
-                      setState(() {
-                        _diceSet = preset.diceSet;
-                        _modifierController.text = preset.diceSet.modifier.toString();
-                      });
-                    },
-                    itemBuilder: (context) {
-                      return [
-                        ...presets.map((preset) {
-                          return PopupMenuItem<DiceSetPreset>(
-                            value: preset,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        preset.name,
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                      Text(
-                                        preset.diceSet.description,
-                                        style: const TextStyle(fontSize: 12),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size:16),
-                                  onPressed: () {
-                                    presetProvider.deletePreset(preset.id);
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ];
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.folder_open),
-                          const SizedBox(width: 8),
-                          const Text('Load'),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+          // Roll button 
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8.0),
+              child: ElevatedButton.icon(
+              onPressed: _diceSet.dice.isEmpty || _isRolling ? null : _rollDice,
+              icon: Icon(_isRolling ? Icons.hourglass_empty : Icons.casino),
+              label: Text(_isRolling ? 'Rolling...' : 'Roll Dice'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                ),
               ),
-            ],
+            ),
+            ),
           ),
-        ],
+            ],
+          ),            
+          ],
+        ), 
+      ),
     );
   }
 

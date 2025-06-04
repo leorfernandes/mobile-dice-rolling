@@ -12,12 +12,18 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  final PageController _pageController = PageController(initialPage: 1);
-  int _currentPage = 1;
+  // Horizontal navigation (Settings <> Roller <> History)
+  final PageController _horizontalController = PageController(initialPage: 1);
+  int _horizontalPage = 1;
+
+  // Vertical navigation (Main screens <> Presets)
+  final PageController _verticalController = PageController(initialPage: 0);
+  int _verticalPage = 0;
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _horizontalController.dispose();
+    _verticalController.dispose();
     super.dispose();
   }
 
@@ -26,29 +32,23 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_getTitleText()),
-        actions: [
-          // Add a button to manually naigate between screens
-          IconButton(
-            icon: Icon(_currentPage == 0 ? Icons.history : Icons.casino),
-            onPressed: () {
-              // Cycle through screens
-              int nextPage = (_currentPage + 1) % 3;
-              _pageController.animateToPage(
-                nextPage,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
-          ),
-        ],
       ),
       body: Stack(
-        children: [
-          PageView(
-            controller: _pageController,
+        children: [ PageView(
+            scrollDirection: Axis.vertical,
+            controller: _verticalController,
             onPageChanged: (index) {
               setState(() {
-                _currentPage = index;
+                _verticalPage = index;
+              });
+            },
+        children: [
+          // Top: Main horizontal PageView
+          PageView(
+            controller: _horizontalController,
+            onPageChanged: (index) {
+              setState(() {
+                _horizontalPage = index;
               });
             },
             children: const [
@@ -58,23 +58,25 @@ class _MainScreenState extends State<MainScreen> {
               // Middle: Dice roller screen (home)
               DiceRoller(),
 
-              // Your history screen
+              // Right: Your history screen
               RollHistory(),
-
-              // Presets Screen
-              PresetsScreen(),
             ],
           ),
+
+          // Bottom: Presets Screen
+          PresetsScreen(),
+        ],
+        ),
           
           // Right edge tap area to navigate to dice roller (visible on history page)
-            if (_currentPage == 0)
+            if (_verticalPage == 0 && _horizontalPage == 0)
               Positioned(
                 right: 0,
                 top: 0,
                 bottom: 0,
                 child: GestureDetector(
                   onTap: () {
-                    _pageController.animateToPage(
+                    _horizontalController.animateToPage(
                       1,
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
@@ -102,14 +104,14 @@ class _MainScreenState extends State<MainScreen> {
 
 
           // Left edge tap area to navigate to history (visible on dice roller page)
-          if (_currentPage == 1)
+          if (_verticalPage == 0 && _horizontalPage == 1)
             Positioned(
               left: 0,
               top: 0,
               bottom: 0,
               child: GestureDetector(
                 onTap: () {
-                  _pageController.animateToPage(
+                  _horizontalController.animateToPage(
                     0, // Navigate to settings page
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
@@ -136,14 +138,14 @@ class _MainScreenState extends State<MainScreen> {
             ),
 
             // Right edge tap area (visible on dice roller page)
-            if (_currentPage == 1)
+            if (_verticalPage == 0 && _horizontalPage == 1)
               Positioned(
                 right: 0,
                 top: 0,
                 bottom: 0,
                 child: GestureDetector(
                   onTap: () {
-                    _pageController.animateToPage(
+                    _horizontalController.animateToPage(
                       2, // Navigate to history page
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
@@ -169,27 +171,18 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
 
-           if (_currentPage == 1)
+          // Bottom edge tap area (visible on dice roller page)
+           if (_verticalPage == 0 && _horizontalPage == 1)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
               child: GestureDetector(
                onTap: () {
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) => const PresetsScreen(),
-                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                          const begin = Offset(0.0, 1.0);
-                          const end = Offset.zero;
-                          const curve = Curves.easeInOut;
-
-                          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                          var offsetAnimation = animation.drive(tween);
-
-                          return SlideTransition(position: offsetAnimation, child: child);
-                        },
-                      ),
+                    _verticalController.animateToPage(
+                      1, // Navigate to preset page
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
                     );
                   },
                 child: Container(
@@ -213,14 +206,14 @@ class _MainScreenState extends State<MainScreen> {
             ),
 
           // Right side tap area (only visible on history page)
-            if (_currentPage == 2)
+            if (_verticalPage == 0 && _horizontalPage == 2)
               Positioned(
                 left: 0,
                 top: 0,
                 bottom: 0,
                 child: GestureDetector(
                   onTap: () {
-                    _pageController.animateToPage(
+                    _horizontalController.animateToPage(
                       1,
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
@@ -246,15 +239,15 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
 
-            if (_currentPage == 3)
+            if (_verticalPage == 1)
             Positioned(
               left: 0,
               right: 0,
               top: 0,
               child: GestureDetector(
                onTap: () {
-                    _pageController.animateToPage(
-                      1, // Navigate to roller page
+                    _verticalController.animateToPage(
+                      0, // Navigate to roller page
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                     );
@@ -282,13 +275,31 @@ class _MainScreenState extends State<MainScreen> {
       ),
       // bottom navigation for even easier navigation
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentPage,
+        currentIndex: _verticalPage == 1 ? 3 : _horizontalPage,
         onTap: (index) {
-          _pageController.animateToPage(
-            index,
+          if (index == 3) {
+          // Navigate to presets (vertical swipe)
+          _verticalController.animateToPage(
+            1,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves. easeInOut,
+          );
+        } else {
+          // First ensure we're on the main screen
+          if (_verticalPage == 1) {
+          _verticalController.animateToPage(
+            0,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           );
+        }
+        // Then navigate horizontally
+        _horizontalController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+        }
         },
         items: const [
           BottomNavigationBarItem(
@@ -309,27 +320,30 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ]
       )
-    );
-  }
-
-  // Helper methods for dynamic UI elements
-  String _getTitleText() {
-    switch (_currentPage) {
-      case 0: return 'Settings';
-      case 1: return 'Dice Roller';
-      case 2: return 'Roll History';
-      case 3: return 'Saved Presets';
-      default: return 'Dice Roller';
+      );
+    }
+      
+    // Helper methods for dynamic UI elements
+    String _getTitleText() {
+      if (_verticalPage == 1) return 'Saved Presets';
+  
+      switch (_horizontalPage) {
+        case 0: return 'Settings';
+        case 1: return 'Dice Roller';
+        case 2: return 'Roll History';
+        case 3: return 'Saved Presets';
+        default: return 'Dice Roller';
+      }
+    }
+  
+    IconData _getActionIcon() {
+      if (_verticalPage == 1) return Icons.save;
+  
+      switch (_horizontalPage) {
+        case 0: return Icons.casino;
+        case 1: return Icons.history;
+        case 2: return Icons.settings;
+        default: return Icons.casino;
+      }
     }
   }
-
-  IconData _getActionIcon() {
-    switch (_currentPage) {
-      case 0: return Icons.casino;
-      case 1: return Icons.history;
-      case 2: return Icons.settings;
-      case 3: return Icons.save;
-      default: return Icons.casino;
-    }
-  }
-}

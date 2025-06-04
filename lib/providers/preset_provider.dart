@@ -33,6 +33,7 @@ class DiceSetPreset {
 
 class PresetProvider with ChangeNotifier {
   List<DiceSetPreset> _presets = [];
+  static const String _storageKey = 'saved_presets';
 
   PresetProvider() {
     _loadPresets();
@@ -44,9 +45,10 @@ class PresetProvider with ChangeNotifier {
   Future<void> _loadPresets() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final presetsJson = prefs.getStringList('presets') ?? [];
+      final presetsJson = prefs.getStringList(_storageKey) ?? [];
 
-      _presets = presetsJson.map((json) {return DiceSetPreset.fromMap(jsonDecode(json));}).toList();
+      _presets = presetsJson.map((json) {
+        return DiceSetPreset.fromMap(jsonDecode(json));}).toList();
 
       notifyListeners();
     } catch (e) {
@@ -63,7 +65,7 @@ class PresetProvider with ChangeNotifier {
         .map((preset) {return jsonEncode(preset.toMap());})
         .toList();
 
-      await prefs.setStringList('presets', presetsJson);
+      await prefs.setStringList(_storageKey, presetsJson);
     } catch (e) {
       print('Error saving presets: $e');
     }
@@ -80,7 +82,7 @@ class PresetProvider with ChangeNotifier {
       ),
     ));
 
-    _savePresets();
+    await _savePresets();
     notifyListeners();
   }
 
