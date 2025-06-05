@@ -77,7 +77,7 @@ class PresetProvider with ChangeNotifier {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
       diceSet: DiceSet(
-        dice: diceSet.dice,
+        dice: Map<int, int>.from(diceSet.dice),
         modifier: diceSet.modifier,
       ),
     ));

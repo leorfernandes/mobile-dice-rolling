@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/dice_set.dart';
 
 class DiceSetProvider with ChangeNotifier {
-  DiceSet _currentDiceSet = DiceSet(dice: {4: 0, 6: 0, 8: 0, 10: 0, 12: 0, 20: 0, 100: 0});
+  DiceSet _currentDiceSet = DiceSet(dice: {});
 
   DiceSet get currentDiceSet => _currentDiceSet;
 
@@ -27,7 +27,7 @@ class DiceSetProvider with ChangeNotifier {
   }
 
   void clearDiceSet() {
-    _currentDiceSet = DiceSet(dice: {4: 0, 6: 0, 8: 0, 10: 0, 12: 0, 20: 0, 100: 0});
+    _currentDiceSet = DiceSet(dice: {});
     notifyListeners();
   }
 }

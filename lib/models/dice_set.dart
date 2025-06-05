@@ -13,7 +13,7 @@ class DiceSet {
     int? modifier,
   }) {
     return DiceSet(
-      dice: dice ?? Map.from(this.dice),
+      dice: dice ?? Map<int, int>.from(this.dice),
       modifier: modifier ?? this.modifier,
     );
   }

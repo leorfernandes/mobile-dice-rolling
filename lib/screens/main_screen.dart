@@ -64,7 +64,21 @@ class _MainScreenState extends State<MainScreen> {
           ),
 
           // Bottom: Presets Screen
-          PresetsScreen(),
+          PresetsScreen(
+            onNavigateToRoller: () {
+              _verticalController.animateToPage(
+                0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              ).then((_) {
+                _horizontalController.animateToPage(
+                  1,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              });
+            }
+          ),
         ],
         ),
           

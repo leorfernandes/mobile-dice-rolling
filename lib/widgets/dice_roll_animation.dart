@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:async';
+import 'dart:ui' as ui;
 
+// -----------------------------------------------------------------------------
+// MODELS & DATA CLASSES
+// -----------------------------------------------------------------------------
+
+/// Defines color schemes for different types of dice
 class DiceColorScheme {
   final Color d4;
   final Color d6;
@@ -60,365 +67,19 @@ class DiceColorScheme {
   );
 }
 
-class DiceRollAnimation extends StatefulWidget {
-  final Map<int, List<int>> results;
-  final int modifier;
-  final VoidCallback onComplete;
-  final bool showFinalResults;
-
-  const DiceRollAnimation({
-    super.key,
-    required this.results,
-    required this.modifier,
-    required this.onComplete,
-    this.showFinalResults = false,
-  });
-
-  @override
-  State<DiceRollAnimation> createState() => _DiceRollAnimationState();
-}
-
-class _DiceRollAnimationState extends State<DiceRollAnimation>
-  with TickerProviderStateMixin {
-    late AnimationController _controller;
-    late AnimationController _pulseController;
-    late Animation<double> _pulseAnimation;
-    late Random _random;
-    int _displayNumber = 1;
-    int _finalTotal = 0;
-
-    late Map<int, List<DiceVisual>> _diceVisuals;
-
-    @override
-    void initState() {
-      super.initState();
-      _random = Random();
-      _diceVisuals = {};
-
-      //Calculate final total
-      _finalTotal = 0;
-      widget.results.forEach((sides, results) {
-        _finalTotal += results.fold<int>(0, (sum, roll) => sum + roll);
-
-        // Generate visual position for each die
-        _diceVisuals[sides] = List.generate(
-          results.length,
-          (_) => DiceVisual(
-            position: Offset(
-              0.2 + _random.nextDouble() * 0.6,
-              0.2 + _random.nextDouble() * 0.6,
-            ),
-            rotation: _random.nextDouble() * pi * 2,
-            scale: 1 + _random.nextDouble() * 0.4,
-            result: 1,
-          ),
-        );
-      });
-
-      _finalTotal += widget.modifier;
-
-      // Setup animation controller
-      _controller = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1800),
-      );
-
-      // Update displayed number several times per second
-      _controller.addListener(() {
-        if (_controller.value < 0.8) {
-          // During animation, show random numbers
-          setState(() {
-            _displayNumber = _random.nextInt(_finalTotal * 2) + 1;
-
-            widget.results.forEach((sides, results) {
-              for (int i = 0; i < results.length; i++) {
-                if (i < _diceVisuals[sides]!.length) {
-                  // Update position slightly for movement effect
-                  final visual = _diceVisuals[sides]![i];
-
-                  // Random movement within a small area
-                  visual.moveAlongPath(_controller.value);
-
-                  // Random scale for bouncing effect
-                  visual.updateRotation(_controller.value);
-
-                  // Scale bouncing effect - higer when the die is in the air
-                  final pathProgress = _controller.value * 0.8;
-                  final pathIndex = (visual.path.length * pathProgress).floor().clamp(0, visual.path.length - 1);
-                  final nextIndex = min(pathIndex + 1, visual.path.length - 1);
-
-                  // Calculate if die is going up or down (using y-coordinate)
-                  final isGoingUp = pathIndex > 0 &&
-                    visual.path[pathIndex].dy > visual.path[pathIndex - 1].dy;
-
-                  // Make the scale larger when the die is higher in the air
-                  final currentY = visual.position.dy;
-                  final initialY = visual.path[0].dy;
-                  final heightDiff = (initialY - currentY).abs();
-
-                  // Scale effect is more pronounced when die is higher
-                  visual.scale = 1.0 + heightDiff * 3.0;
-
-                  // Show random number during animation
-                  visual.result = _random.nextInt(sides) + 1;
-                }
-              }
-            });
-          });
-        } else {
-          // In the final 20% of animation, show the actual result
-          setState(() {
-            _displayNumber = _finalTotal;
-
-            // Set final values
-            widget.results.forEach((sides, results) {
-              for (int i = 0; i < results.length; i++) {
-                if (i < _diceVisuals[sides]!.length) {
-                  _diceVisuals[sides]![i].result = results[i];
-                }
-              }
-            });
-          });
-        }
-      });
-
-      _controller.addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          setState(() {
-            _animationComplete = true;
-          });
-        }
-      });
-
-      // Start the animation
-      _controller.forward();
-
-      _pulseController = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1000),
-      )..repeat(reverse: true);
-
-      _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(_pulseController);
-    }
-
-    bool _animationComplete = false;
-
-    @override
-    void dispose() {
-      _pulseController.dispose();
-      _controller.dispose();
-      super.dispose();
-    }
-    // Get icon for a specific die type
-    Widget getDiceIcon(int sides, double size) {
-      switch (sides) {
-        case 4: return SvgPicture.asset(
-          'assets/icons/dice-d4.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        ); // d4 Icon
-        case 6: return SvgPicture.asset(
-          'assets/icons/dice-d6.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        ); // d6 Icon
-        case 8: return SvgPicture.asset(
-          'assets/icons/dice-d8.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        ); // d8 Icon
-        case 10: return SvgPicture.asset(
-          'assets/icons/dice-d10.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        ); // d10 Icon
-        case 12: return SvgPicture.asset(
-          'assets/icons/dice-d12.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        ); // d12 Icon
-        case 20: return SvgPicture.asset(
-          'assets/icons/dice-d20.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        ); // d20 Icon
-        case 100: return SvgPicture.asset(
-          'assets/icons/dice-d20.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
-        );
-        default: return Icon(Icons.casino, size: size, color: _getDiceColor(0).withOpacity(0.9)); // Default dice icon for any other value
-      }
-    }
-
-    @override
-    Widget build(BuildContext context) {
-      final Size screenSize = MediaQuery.of(context).size;
-
-  
-      return GestureDetector(
-        onTap: () {
-          if (_animationComplete) {
-            widget.onComplete();
-          }
-        },
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, childer) {
-          return Stack(
-            children: [
-              // Background overlay
-              Container(
-                color: Colors.black.withOpacity(0.7 * _controller.value),
-              ),
-              
-              // Dice for each type
-              ...widget.results.entries.expand((entry) {
-                final sides = entry.key;
-
-                return _diceVisuals[sides]?.map((visual) {
-                  return Positioned(
-                    left: visual.position.dx * screenSize.width,
-                    top: visual.position.dy * screenSize.height,
-                    child: Transform.rotate(
-                      angle: visual.rotation,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 70 + (visual.scale * 20),
-                            height: 70 + (visual.scale * 20),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.5),
-                                  blurRadius: 10 + visual.scale * 5,
-                                  offset: Offset(0, 5 + visual.scale * 2),
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                          // The die icon
-                          getDiceIcon(sides, 50 + (visual.scale * 20)),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList() ?? [];
-              }),
-
-            // Main result display
-            if (_controller.value > 0.3)
-              Center(
-                child: TweenAnimationBuilder(
-                  tween: Tween<double>(begin: 0.8, end: 1.0),
-                  duration: const Duration(milliseconds: 3000),
-                  builder: (context, scale, child) {
-                    return Transform.scale(
-                      scale: _controller.value < 0.8
-                        ? 0.8 + _random.nextDouble() * 0.4
-                        : 1.0 + (1.0 - _controller.value) * 2,
-                      child: child,
-                    );
-                  },
-                  child: Text(
-                    _displayNumber.toString(),
-                    style: TextStyle(
-                      fontSize: 120,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: Theme.of(context).primaryColor.withAlpha(204),
-                          blurRadius: 12,
-                          offset: const Offset(2, 2),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            if (_animationComplete)
-              Positioned(
-                bottom: 40,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation:_pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _pulseAnimation.value,
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.touch_app, color: Colors.white, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Tap anywhere to continue',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                      ),
-                    ),
-                      ],
-                  ),
-                ),
-              ),
-                ),
-              ),
-            ],
-            );
-          },
-        ),
-      );
-    }
-
-  // Current color scheme
-  final colorScheme = DiceColorScheme.vibrant;
-
-  // Get color based on die type
-    Color _getDiceColor(int sides) {
-      switch(sides) {
-        case 4: return colorScheme.d4;
-        case 6: return colorScheme.d6;
-        case 8: return colorScheme.d8;
-        case 10: return colorScheme.d10;
-        case 12: return colorScheme.d12;
-        case 20: return colorScheme.d20;
-        case 100: return colorScheme.d100;
-        default: return colorScheme.defaultDice;
-      }
-    }
-  } 
-
-// Helper class to store visual properties for each die
+/// Helper class to store visual properties for each die
 class DiceVisual {
+  // Position and appearance properties
   Offset position;
   double rotation;
   double scale;
   int result;
-  late List<Offset> path; // Path for the die to follow
-  int pathIndex = 0; // Current position in the path
+  
+  // Animation path properties
+  late List<Offset> path;
+  int pathIndex = 0;
+  
+  // Physics properties
   late double initialSpeed;
   late double currentSpeed;
   late double decelaration;
@@ -439,7 +100,7 @@ class DiceVisual {
     decelaration = 0.01 + random.nextDouble() * 0.02; 
   }
 
-  // Generate a random path with multiple points
+  /// Generate a random path with multiple points
   List<Offset> _generateRandomPath() {
     final Random random = Random();
     final List<Offset> points = [];
@@ -482,42 +143,294 @@ class DiceVisual {
 
     return points;
   }
+}
 
-  // Move along the path
-  void moveAlongPath(double progress) {
-    // Calculate which segment of the path we should be on
-    final segmentLength = 1.0 / (path.length - 1);
-    final segment = (progress / segmentLength).floor();
+// -----------------------------------------------------------------------------
+// MAIN WIDGET
+// -----------------------------------------------------------------------------
 
-    // Clamp to valid range
-    final currentSegment = segment.clamp(0, path.length - 2);
+/// Widget that animates dice rolls and displays results
+class DiceRollAnimation extends StatefulWidget {
+  final Map<int, List<int>> results;
+  final int modifier;
+  final VoidCallback onComplete;
+  final bool showFinalResults;
 
-    // Calculate progress within this segment (0-1)
-    final segmentProgress = (progress - (currentSegment * segmentLength)) / segmentLength;
-  
-    // Interpolate between current point and next point
-    final start = path[currentSegment];
-    final end = path[currentSegment + 1];
+  const DiceRollAnimation({
+    super.key,
+    required this.results,
+    required this.modifier,
+    required this.onComplete,
+    this.showFinalResults = false,
+  });
 
-    position = Offset(
-      start.dx + (end.dx - start.dx) * segmentProgress,
-      start.dy + (end.dy - start.dy) * segmentProgress,
-    );
-  }
+  @override
+  State<DiceRollAnimation> createState() => _DiceRollAnimationState();
+}
 
-  void updateRotation(double progress) {
-    // Fast at first, then gradually slow down
-    if (progress < 0.1) {
-      // Initial acceleration
-      currentSpeed = initialSpeed * (1 + progress * 5);
-    } else {
-      // Gradual decelation
-      currentSpeed = max(0.05, initialSpeed * (1.0 - (progress - 0.1) / 0.9));
+// -----------------------------------------------------------------------------
+// WIDGET STATE IMPLEMENTATION
+// -----------------------------------------------------------------------------
+
+class _DiceRollAnimationState extends State<DiceRollAnimation>
+  with TickerProviderStateMixin {
+    // Animation controllers
+    late AnimationController _controller;
+    late Random _random;
+
+    late AnimationController _shakeController;
+    late Animation<double> _shakeAnimation;
+
+    int _displayNumber = 0;
+    Timer? _numberChangeTimer;
+    
+    // Display values
+    int _finalTotal = 0;
+    bool _animationComplete = false;
+
+    // Current color scheme
+    final colorScheme = DiceColorScheme.vibrant;
+
+    @override
+    void initState() {
+      super.initState();
+      _setupAnimation();
+      _setupShakeAnimation();
+      _setupNumberAnimation();
     }
 
-    // Add different rotation axes
-    final random = Random();
+    @override
+    void dispose() {
+      _controller.dispose();
+      _shakeController.dispose();
+      _numberChangeTimer?.cancel();
+      super.dispose();
+    }
 
-    rotation += currentSpeed * (1 + random.nextDouble() * 0.5);
-  }
-}  
+    // -----------------------------------------------------------------------------
+    // ANIMATION SETUP AND CONTROL
+    // -----------------------------------------------------------------------------
+
+    void _setupAnimation() {
+      _random = Random();
+
+      // Setup main animation controller
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1800),
+      );
+
+      // Calculate final total
+      _finalTotal = widget.results.entries
+          .fold(0, (sum, entry) => sum + entry.value.reduce((a, b) => a + b)) + 
+          widget.modifier;
+
+      _controller.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() {
+            _animationComplete = true;
+          });
+        }
+      });
+
+      // Start the animation
+      _controller.forward();
+    }
+
+    void _setupShakeAnimation() {
+      _shakeController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 50),
+      );
+
+      _shakeAnimation = TweenSequence<double>([
+        TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 50.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 25,
+        ),
+        TweenSequenceItem(
+          tween: Tween(begin: -50.0, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 25,
+        ),
+      ]).animate(_shakeController);
+
+      // Repeat the shake animation while the main animation is running
+      _shakeController.repeat();
+
+      _controller.addListener(() {
+        if (_controller.value > 0.8 && _shakeController.isAnimating) {
+          _shakeController.stop();
+          _shakeController.value = 0.0;
+        }
+      });
+    }
+
+    void _setupNumberAnimation() {
+      _displayNumber = _finalTotal;
+      _numberChangeTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+        if (_controller.value < 0.8) {
+          setState(() {
+            //Generate a random number around the final total
+            _displayNumber = _finalTotal + _random.nextInt(_finalTotal) - (_finalTotal ~/2);
+            // Ensure number is positive
+            _displayNumber = _displayNumber.abs();
+          });
+        } else {
+          _numberChangeTimer?.cancel();
+          setState(() {
+            _displayNumber = _finalTotal;
+          });
+        }
+      });
+    }
+
+    // -----------------------------------------------------------------------------
+    // DICE APPEARANCE HELPERS
+    // -----------------------------------------------------------------------------
+
+    /// Get color based on die type
+    Color _getDiceColor(int sides) {
+      switch(sides) {
+        case 4: return colorScheme.d4;
+        case 6: return colorScheme.d6;
+        case 8: return colorScheme.d8;
+        case 10: return colorScheme.d10;
+        case 12: return colorScheme.d12;
+        case 20: return colorScheme.d20;
+        case 100: return colorScheme.d100;
+        default: return colorScheme.defaultDice;
+      }
+    }
+
+    /// Get icon for a specific die type
+    Widget getDiceIcon(int sides, double size) {
+      switch (sides) {
+        case 4: return SvgPicture.asset(
+          'assets/icons/dice-d4.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        case 6: return SvgPicture.asset(
+          'assets/icons/dice-d6.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        case 8: return SvgPicture.asset(
+          'assets/icons/dice-d8.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        case 10: return SvgPicture.asset(
+          'assets/icons/dice-d10.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        case 12: return SvgPicture.asset(
+          'assets/icons/dice-d12.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        case 20: return SvgPicture.asset(
+          'assets/icons/dice-d20.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        case 100: return SvgPicture.asset(
+          'assets/icons/dice-d20.svg',
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(_getDiceColor(6).withOpacity(0.9), BlendMode.srcIn),
+        );
+        default: return Icon(Icons.casino, size: size, color: _getDiceColor(0).withOpacity(0.9));
+      }
+    }
+
+    // -----------------------------------------------------------------------------
+    // WIDGET BUILD METHOD
+    // -----------------------------------------------------------------------------
+
+    @override
+    Widget build(BuildContext context) {
+      return GestureDetector(
+        onTap: () {
+          if (_animationComplete) {
+            widget.onComplete();
+          }
+        },
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                // Background darkening overlay
+                Container(
+                  color: Colors.black.withOpacity(0.7 * _controller.value),
+                ),
+
+                // Main result display (animated number)
+                if (_controller.value > 0.3)
+                  Center(
+                    child: _buildNumberDisplay(),
+                  ),
+              ]
+            );
+          },
+        ),
+      );
+    }
+    
+    Widget _buildNumberDisplay() {
+  return AnimatedOpacity(
+    opacity: _controller.value,
+    duration: const Duration(milliseconds: 300),
+    child: AnimatedBuilder(
+      animation: _shakeAnimation,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (Rect bounds) {
+            return LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.white.withOpacity(0.3),
+                Colors.white,
+                Colors.white,
+                Colors.white.withOpacity(0.3),
+                Colors.transparent,
+              ],
+              stops: const [0.0, 0.1, 0.3, 0.7, 0.9, 1.0],
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.dstIn,
+          child: ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(
+              sigmaX: 3.0,
+              sigmaY: 8.0, // More vertical blur for motion effect
+            ),
+            child: Transform.translate(
+              offset: Offset(0, _shakeAnimation.value),
+              child: Text(
+                _displayNumber.toString(),
+                style: TextStyle(
+                  fontSize: 120,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+}
