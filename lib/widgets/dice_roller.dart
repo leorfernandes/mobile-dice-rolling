@@ -1,8 +1,8 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/gestures.dart';
 
 import '../models/dice_set.dart';
 import '../providers/dice_set_provider.dart';
@@ -55,7 +55,6 @@ class _DiceRollerState extends State<DiceRoller> {
   //region Build
   @override
   Widget build(BuildContext context) {
-    // Get screen dimensions
     final screenSize = MediaQuery.of(context).size;
 
     return Consumer<DiceSetProvider>(
@@ -67,184 +66,282 @@ class _DiceRollerState extends State<DiceRoller> {
         });
 
         return Center(
-          child: SizedBox(
-            width: screenSize.width * 0.9,
-            height: screenSize.height * 0.9,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                //region Main Content Layout - Dice Selection and Modifier
-                Flexible(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              double totalWidth = constraints.maxWidth * 0.85;
+              double spacing = totalWidth * 0.03;
+              double dieSize = ((totalWidth - spacing * 3) / 4).clamp(32.0, 128.0);
+
+              return Listener(
+                onPointerSignal: (pointerSignal) {
+                  if (pointerSignal is PointerScrollEvent) {
+                    if (pointerSignal.scrollDelta.dy < 0) {
+                      if (diceSet.dice.isNotEmpty && !_isRolling) {
+                        _rollDice(diceSet);
+                      }
+                    }
+                  }
+                },
+                child: GestureDetector(
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity! < 0) {
+                      if (diceSet.dice.isNotEmpty && !_isRolling) {
+                        _rollDice(diceSet);
+                      }
+                    }
+                  },
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: spacing,
+                    runSpacing: spacing,
                     children: [
-                      // Left Column - Dice Selection Grid
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: GridView.count(
-                                  crossAxisCount: 3,
-                                  mainAxisSpacing: 8,
-                                  crossAxisSpacing: 8,
-                                  padding: const EdgeInsets.all(8),
-                                  children: _availableDice.map((sides) {
-                                    final count = diceSet.dice[sides] ?? 0;
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                      child: Stack(
-                                        children: [
-                                          // Dice selection button
-                                          TextButton(
-                                            onPressed: () {
-                                              final newDiceSet = diceSet.addDie(sides);
-                                              Provider.of<DiceSetProvider>(context, listen: false).loadDiceSet(newDiceSet);
-                                            },
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                _getDiceIcon(sides, 36)
-                                              ],
+                      Container(
+                        width: totalWidth,
+                        child: Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
+                          alignment: WrapAlignment.center,
+                          children: _availableDice.map((sides) {
+                            final count = diceSet.dice[sides] ?? 0;
+                            return SizedBox(
+                              width: dieSize,
+                              height: dieSize,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Dice selection button
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: () {
+                                      final newDiceSet = diceSet.addDie(sides);
+                                      Provider.of<DiceSetProvider>(context, listen: false).loadDiceSet(newDiceSet);
+                                    },
+                                    onLongPress: () {
+                                      final newDiceSet = diceSet.clearDie(sides);
+                                      Provider.of<DiceSetProvider>(context, listen: false).loadDiceSet(newDiceSet);
+                                    },
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        _getDiceIcon(sides, dieSize)
+                                      ],
+                                    ),
+                                  ),
+                                  // Dice count indicator
+                                  if (count > 0)
+                                    IgnorePointer(
+                                      child: Container(
+                                        width: dieSize,
+                                        height: dieSize,
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '$count',
+                                          style: TextStyle(
+                                            fontSize: dieSize * 0.4,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red.withOpacity(0.8),
+                                            shadows: const [
+                                              Shadow(
+                                                color: Colors.black,
+                                                blurRadius: 2,
+                                                offset: Offset(1, 1),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (count > 0)
+                                    Positioned(
+                                      right: 2,
+                                      top: 2,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          final newDiceSet = diceSet.removeDie(sides);
+                                          Provider.of<DiceSetProvider>(context, listen: false).loadDiceSet(newDiceSet);
+                                        },
+                                        child: Container(
+                                          width: dieSize * 0.25,
+                                          height: dieSize * 0.25,
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.remove_circle_outline,
                                             ),
                                           ),
-                                          // Dice count indicator
-                                          if (count > 0)
-                                            Positioned(
-                                              right: 0,
-                                              top: 0,
-                                              child: Container(
-                                                padding: const EdgeInsets.all(8),
-                                                decoration: BoxDecoration(
-                                                  color: Theme.of(context).primaryColor,
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: Theme.of(context).scaffoldBackgroundColor,
-                                                    width: 2,
-                                                  ),
-                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      Provider.of<DiceSetProvider>(context).showModifier == true
+                          ? Container(
+                              width: dieSize,
+                              height: dieSize,
+                              child: Center(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final double textFieldSize = constraints.maxWidth;
+                                    final double iconSize = constraints.maxWidth * 0.3;
+
+                                    return Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 8,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        Container(
+                                          width: textFieldSize,
+                                          height: textFieldSize,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black,
+                                            border: Border.all(color: Colors.red),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Stack(
+                                            children: [
+                                              TextField(
+                                                controller: _modifierController,
+                                                keyboardType: TextInputType.numberWithOptions(signed: true),
+                                                style: const TextStyle(color: Colors.transparent),
+                                                cursorColor: Colors.transparent,
+                                                decoration: const InputDecoration.collapsed(hintText: ''),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              Center(
                                                 child: Text(
-                                                  count.toString(),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12,
+                                                  _modifierController.text,
+                                                  style: TextStyle(
+                                                    fontSize: textFieldSize * 0.5,
                                                     fontWeight: FontWeight.bold,
+                                                    color: Colors.red.withOpacity(0.8),
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                              Positioned(
+                                                left: 0,
+                                                top: 0,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    final value = diceSet.modifier - 1;
+                                                    _modifierController.text = value.toString();
+                                                  },
+                                                  child: Container(
+                                                    width: dieSize * 0.25,
+                                                    height: dieSize * 0.25,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Center(
+                                                      child: Icon(
+                                                        Icons.remove_circle_outline,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
-                                            ),
-                                        ],
-                                      ),
+                                              Positioned(
+                                                right: 0,
+                                                top: 0,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    final value = diceSet.modifier + 1;
+                                                    _modifierController.text = value.toString();
+                                                  },
+                                                  child: Container(
+                                                    width: dieSize * 0.25,
+                                                    height: dieSize * 0.25,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Center(
+                                                      child: Icon(
+                                                        Icons.add_circle_outline,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              Positioned(
+                                                bottom: 0,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    Provider.of<DiceSetProvider>(context, listen: false)
+                                                        .toggleModifier(false);
+                                                  },
+                                                  child: Container(
+                                                    width: dieSize * 0.25,
+                                                    height: dieSize * 0.25,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Center(
+                                                      child: Icon(
+                                                        Icons.cancel_outlined,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     );
-                                  }).toList(),
+                                  },
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Right Column - Modifier Controls
-                      Flexible(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Modifier Input with +/- buttons
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed: () {
-                                    final value = (diceSet.modifier - 1);
-                                    _modifierController.text = value.toString();
-                                  },
-                                ),
-                                SizedBox(
-                                  width: 60,
-                                  child: TextField(
-                                    controller: _modifierController,
-                                    keyboardType: const TextInputType.numberWithOptions(signed: true),
-                                    textAlign: TextAlign.center,
-                                    decoration: const InputDecoration(
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      border: OutlineInputBorder(),
+                            )
+                          : SizedBox(
+                              width: dieSize,
+                              height: dieSize,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: () {
+                                      Provider.of<DiceSetProvider>(context, listen: false)
+                                          .toggleModifier(true);
+                                    },
+                                    child: Icon(
+                                      Icons.add_circle_outline,
+                                      size: dieSize * 0.5,
+                                      color: Colors.black,
                                     ),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  onPressed: () {
-                                    final value = (diceSet.modifier + 1);
-                                    _modifierController.text = value.toString();
-                                  },
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
-                //endregion
-
-                const SizedBox(height: 16),
-
-                //region Action Buttons Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Save Button
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: TextButton(
-                          onPressed: diceSet.dice.isEmpty
-                              ? null
-                              : () {
-                                  final presetProvider = Provider.of<PresetProvider>(context, listen: false);
-                                  presetProvider.addPreset("Set", diceSet);
-                                },
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                Icons.save,
-                                size: 32,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Roll Button
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: TextButton(
-                          onPressed: diceSet.dice.isEmpty || _isRolling
-                              ? null
-                              : () => _rollDice(diceSet),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                _isRolling ? Icons.hourglass_empty : Icons.casino,
-                                size: 32,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                //endregion
-              ],
-            ),
+              );
+            },
           ),
         );
       },

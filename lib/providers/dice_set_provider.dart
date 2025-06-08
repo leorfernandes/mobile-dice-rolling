@@ -3,8 +3,10 @@ import '../models/dice_set.dart';
 
 class DiceSetProvider with ChangeNotifier {
   DiceSet _currentDiceSet = DiceSet(dice: {});
+  bool _showModifier = false;
 
   DiceSet get currentDiceSet => _currentDiceSet;
+  bool get showModifier => _showModifier;
 
   void updateDiceCount(int sides, int count) {
     final newDice = Map<int, int>.from(_currentDiceSet.dice);
@@ -28,6 +30,11 @@ class DiceSetProvider with ChangeNotifier {
 
   void clearDiceSet() {
     _currentDiceSet = DiceSet(dice: {});
+    notifyListeners();
+  }
+
+  void toggleModifier(bool value) {
+    _showModifier = value;
     notifyListeners();
   }
 }

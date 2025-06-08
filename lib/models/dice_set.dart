@@ -41,6 +41,23 @@ class DiceSet {
     return copyWith(dice: newDice);
   }
 
+  // Clear that die type from the set
+  DiceSet clearDie(int sides) {
+    if (!dice.containsKey(sides) || dice[sides] == 0) {
+      return this;
+    }
+    
+    final newDice = Map<int, int>.from(dice);
+    newDice[sides] = 0;
+
+    if (newDice[sides] == 0) {
+      newDice.remove(sides);
+    }
+
+    return copyWith(dice: newDice);
+  }
+
+
   // Get a formatted description of the dice set
   String get description {
     List<String> parts = [];
