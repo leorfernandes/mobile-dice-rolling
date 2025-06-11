@@ -2,12 +2,13 @@ class DiceSet {
   final Map<int, int> dice;
   final int modifier;
 
-  //Constructor
+  // Constructor
   const DiceSet({
     required this.dice,
     this.modifier = 0,
   });
 
+  // Copy with optional new values
   DiceSet copyWith({
     Map<int, int>? dice,
     int? modifier,
@@ -30,14 +31,11 @@ class DiceSet {
     if (!dice.containsKey(sides) || dice[sides] == 0) {
       return this;
     }
-    
     final newDice = Map<int, int>.from(dice);
     newDice[sides] = newDice[sides]! - 1;
-
     if (newDice[sides] == 0) {
       newDice.remove(sides);
     }
-
     return copyWith(dice: newDice);
   }
 
@@ -46,37 +44,28 @@ class DiceSet {
     if (!dice.containsKey(sides) || dice[sides] == 0) {
       return this;
     }
-    
     final newDice = Map<int, int>.from(dice);
-    newDice[sides] = 0;
-
-    if (newDice[sides] == 0) {
-      newDice.remove(sides);
-    }
-
+    newDice.remove(sides);
     return copyWith(dice: newDice);
   }
 
-
   // Get a formatted description of the dice set
   String get description {
-    List<String> parts = [];
-
+    final parts = <String>[];
     dice.forEach((sides, count) {
       if (count > 0) {
         parts.add('${count}d$sides');
       }
     });
-
     if (modifier > 0) {
       parts.add('+ $modifier');
     } else if (modifier < 0) {
       parts.add('- ${modifier.abs()}');
     }
-
     return parts.join(' ');
   }
 
+  // Serialization
   Map<String, dynamic> toMap() {
     return {
       'dice': dice.map((key, value) => MapEntry(key.toString(), value)),
@@ -85,9 +74,8 @@ class DiceSet {
   }
 
   factory DiceSet.fromMap(Map<String, dynamic> map) {
-    final diceMap = (map['dice'] as Map<String, dynamic>).map((key, value) => 
-      MapEntry(int.parse(key), value as int));
-    
+    final diceMap = (map['dice'] as Map<String, dynamic>)
+        .map((key, value) => MapEntry(int.parse(key), value as int));
     return DiceSet(
       dice: diceMap,
       modifier: map['modifier'] as int,
