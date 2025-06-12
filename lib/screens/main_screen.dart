@@ -132,7 +132,6 @@ class _MainScreenState extends State<MainScreen> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         ),
-        quarterTurns: 1,
       ));
     }
 
@@ -147,7 +146,6 @@ class _MainScreenState extends State<MainScreen> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           ),
-          quarterTurns: 3,
         ),
         _buildEdgeTapArea(
           context: context,
@@ -157,7 +155,6 @@ class _MainScreenState extends State<MainScreen> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           ),
-          quarterTurns: 1,
         ),
         _buildEdgeTapArea(
           context: context,
@@ -167,7 +164,6 @@ class _MainScreenState extends State<MainScreen> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           ),
-          quarterTurns: 0,
           isHorizontal: true,
         ),
       ]);
@@ -183,7 +179,6 @@ class _MainScreenState extends State<MainScreen> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         ),
-        quarterTurns: 3,
       ));
     }
 
@@ -197,7 +192,6 @@ class _MainScreenState extends State<MainScreen> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         ),
-        quarterTurns: 0,
         isHorizontal: true,
       ));
     }
@@ -209,7 +203,6 @@ class _MainScreenState extends State<MainScreen> {
     required BuildContext context,
     required Alignment alignment,
     required VoidCallback onTap,
-    required int quarterTurns,
     bool isHorizontal = false,
   }) {
     return Positioned.fill(
@@ -224,20 +217,17 @@ class _MainScreenState extends State<MainScreen> {
             child: Center(
               child: Container( 
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                child: RotatedBox(
-                quarterTurns: quarterTurns,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       _getIcon(alignment, _verticalPage, _horizontalPage),
-                      color: Theme.of(context).primaryColor,
+                      color: Theme.of(context).colorScheme.secondary,
                       size: 16,
                     ),
                     const SizedBox(width: 4),
                   ],
                 ),
-              ),
             ),
           ),
         ),
@@ -247,17 +237,17 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   IconData _getIcon(Alignment alignment, int horizontalPage, int verticalPage) {
-    if (verticalPage == 0) {
+    if (_verticalPage == 0) {
       // On the horizontal pages
-      switch (horizontalPage) {
+      switch (_horizontalPage) {
         case 0: // Settings page
           if (alignment == Alignment.centerRight) return Icons.casino;
           break;
         case 1: // Dice Roller Page
           if (alignment == Alignment.centerLeft) return Icons.settings;
           if (alignment == Alignment.centerRight) return Icons.history;
-          if (alignment == Alignment.topCenter) return Icons.save;
-          if (alignment == Alignment.bottomCenter) return Icons.casino; 
+          if (alignment == Alignment.topCenter) return Icons.casino;
+          if (alignment == Alignment.bottomCenter) return Icons.save; 
           break;
         case 2: // History page
           if (alignment == Alignment.centerLeft) return Icons.casino;

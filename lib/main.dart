@@ -7,6 +7,7 @@ import 'providers/sound_provider.dart';
 import 'providers/history_provider.dart';
 import 'providers/preset_provider.dart';
 import 'providers/dice_set_provider.dart';
+import 'themes/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,13 +38,9 @@ class MyApp extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blue,
-              brightness: themeProvider.isDarkMode ? Brightness.dark : Brightness.light,
-            ),
-            useMaterial3: true,
-          ),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.system,
           initialRoute: '/',
           routes: {
             '/': (context) => const MainScreen(),

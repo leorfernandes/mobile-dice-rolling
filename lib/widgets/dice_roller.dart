@@ -21,7 +21,7 @@ class DiceRoller extends StatefulWidget {
 
 class _DiceRollerState extends State<DiceRoller> {
   //region Fields
-  final List<int> _availableDice = [4, 6, 8, 10, 12, 20, 100];
+  final List<int> _availableDice = [4, 6, 8, 10, 12, 20];
   Map<int, List<int>> _rollResults = {};
   bool _isRolling = false;
   bool _showingAnimation = false;
@@ -70,7 +70,7 @@ class _DiceRollerState extends State<DiceRoller> {
             builder: (context, constraints) {
               double totalWidth = constraints.maxWidth * 0.85;
               double spacing = totalWidth * 0.03;
-              double dieSize = ((totalWidth - spacing * 3) / 4).clamp(32.0, 128.0);
+              double dieSize = ((totalWidth - spacing * 2) / 3).clamp(32.0, 128.0);
 
               return Listener(
                 onPointerSignal: (pointerSignal) {
@@ -406,52 +406,42 @@ class _DiceRollerState extends State<DiceRoller> {
 
   //region Dice Icon Helper
   Widget _getDiceIcon(int sides, double size) {
+    final fillColor = Theme.of(context).colorScheme.primary;
+    final lineColor = Theme.of(context).colorScheme.background;
+    
+    Widget buildDiceWithColors(String assetPath) {
+      return Stack(
+        children: [
+          //Fill layer
+          SvgPicture.asset(
+            assetPath,
+            width: size,
+            height: size,
+          ),
+        ],
+      );
+    }
+
     switch (sides) {
       case 4:
-        return SvgPicture.asset(
-          'assets/icons/dice-d4.svg',
-          width: size,
-          height: size,
-        );
+        return buildDiceWithColors('assets/icons/dice-d4.svg');
       case 6:
-        return SvgPicture.asset(
-          'assets/icons/dice-d6.svg',
-          width: size,
-          height: size,
-        );
+        return buildDiceWithColors('assets/icons/dice-d6.svg');
       case 8:
-        return SvgPicture.asset(
-          'assets/icons/dice-d8.svg',
-          width: size,
-          height: size,
-        );
+        return buildDiceWithColors('assets/icons/dice-d8.svg');
       case 10:
-        return SvgPicture.asset(
-          'assets/icons/dice-d10.svg',
-          width: size,
-          height: size,
-        );
+        return buildDiceWithColors('assets/icons/dice-d10.svg');
       case 12:
-        return SvgPicture.asset(
-          'assets/icons/dice-d12.svg',
-          width: size,
-          height: size,
-        );
+        return buildDiceWithColors('assets/icons/dice-d12.svg');
       case 20:
-        return SvgPicture.asset(
-          'assets/icons/dice-d20.svg',
-          width: size,
-          height: size,
-        );
-      case 100:
-        return SvgPicture.asset(
-          'assets/icons/dice-d20.svg',
-          width: size,
-          height: size,
-        );
+        return buildDiceWithColors('assets/icons/dice-d20.svg');
       default:
-        return Icon(Icons.casino, size: size);
-    }
+        return Icon(
+          Icons.casino,
+          size: size,
+          color: fillColor,
+        );
   }
   //endregion
+  }
 }

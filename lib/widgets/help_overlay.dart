@@ -43,39 +43,39 @@ class HelpOverlay extends StatelessWidget {
         case 0: // Settings page
           arrows.add(_buildArrow(
             alignment: Alignment.centerRight,
-            icon: Icons.arrow_forward,
-            label: 'Roller',
+            arrow: Icons.arrow_forward,
+            icon: Icons.casino,
           ));
           break;
         case 1: // Dice Roller Page
           arrows.addAll([
             _buildArrow(
               alignment: Alignment.topCenter,
-              icon: Icons.arrow_upward,
-              label: 'Roll',
+              arrow: Icons.arrow_upward,
+              icon: Icons.casino,
             ),
             _buildArrow(
               alignment: Alignment.centerLeft,
-              icon: Icons.arrow_back,
-              label: 'Settings',
+              arrow: Icons.arrow_back,
+              icon: Icons.settings,
             ),
             _buildArrow(
               alignment: Alignment.centerRight,
-              icon: Icons.arrow_forward,
-              label: 'History',
+              arrow: Icons.arrow_forward,
+              icon: Icons.history,
             ),
             _buildArrow(
               alignment: Alignment.bottomCenter,
-              icon: Icons.arrow_downward,
-              label: 'Presets',
+              arrow: Icons.arrow_downward,
+              icon: Icons.save,
             ),
           ]);
           break;
         case 2: // History page
           arrows.add(_buildArrow(
             alignment: Alignment.centerLeft,
-            icon: Icons.arrow_back,
-            label: 'Roller',
+            arrow: Icons.arrow_back,
+            icon: Icons.casino,
           ));
           break;
       }
@@ -83,8 +83,8 @@ class HelpOverlay extends StatelessWidget {
       // On the presets page
       arrows.add(_buildArrow(
         alignment: Alignment.topCenter,
-        icon: Icons.arrow_upward,
-        label: 'Roller',
+        arrow: Icons.arrow_upward,
+        icon: Icons.casino,
       ));
     }
 
@@ -94,7 +94,7 @@ class HelpOverlay extends StatelessWidget {
   Widget _buildArrow({
     required Alignment alignment,
     required IconData icon,
-    required String label,
+    required IconData arrow,
   }) {
     return Align(
       alignment: alignment,
@@ -104,18 +104,15 @@ class HelpOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              icon,
+              arrow,
               color: Colors.white,
               size: 48,
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Icon(
+              icon,
+              color: Colors.white,
+              size: 48,
             ),
           ],
         ),
