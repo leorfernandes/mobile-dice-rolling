@@ -216,14 +216,14 @@ class _MainScreenState extends State<MainScreen> {
             color: Colors.transparent,
             child: Center(
               child: Container( 
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       _getIcon(alignment, _verticalPage, _horizontalPage),
                       color: Theme.of(context).colorScheme.secondary,
-                      size: 16,
+                      size: 24,
                     ),
                     const SizedBox(width: 4),
                   ],
@@ -255,7 +255,7 @@ class _MainScreenState extends State<MainScreen> {
       }
     } else {
       // On the presets page
-      if (alignment == Alignment.bottomCenter) return Icons.casino;
+      if (alignment == Alignment.topCenter) return Icons.casino;
     }
     return Icons.help_outlined;
   }

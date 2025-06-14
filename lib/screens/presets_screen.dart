@@ -28,7 +28,9 @@ class _PresetsScreenState extends State<PresetsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return Stack(
+      children: [
+        SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column (
@@ -78,7 +80,7 @@ class _PresetsScreenState extends State<PresetsScreen> {
                     return Dismissible(
                       key: ValueKey(preset.id),
                       background: Container(
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.primary,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
                         child: const Icon(
@@ -166,7 +168,62 @@ class _PresetsScreenState extends State<PresetsScreen> {
         ],
           ),
         ),
+      ),
+      Positioned(
+        bottom: 32,
+        left: 0,
+        right: 0,
+        child: GestureDetector(
+          onTap: () => _savePreset(context),
+          child: Container(
+            width: 128,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Icon(Icons.save, color: Theme.of(context).colorScheme.secondary),
+            )
+          )
+        )
+      )
+      ]
+    );
+  }
+
+  void _savePreset(BuildContext context) async {
+    final diceSet = Provider.of<DiceSetProvider>(context, listen: false).currentDiceSet;
+    final controller = TextEditingController();
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Preset'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Preset Name'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Icon(Icons.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Icon(Icons.save),
+          ),
+        ],
+      ),
+    );
+
+    if (name != null && name.isNotEmpty) {
+      Provider.of<PresetProvider>(context, listen: false).addPreset(name, diceSet);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Icon(Icons.check)),
       );
+    }
   }
 
   String _getDiceDescription(DiceSet diceSet) {
@@ -197,14 +254,11 @@ class _PresetsScreenState extends State<PresetsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Preset Name'),
+        title: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
         content: Form(
           key: _formKey,
           child: TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Preset Name',
-            ),
             autofocus: true,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {

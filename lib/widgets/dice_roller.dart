@@ -10,6 +10,7 @@ import '../providers/history_provider.dart';
 import '../providers/preset_provider.dart';
 import '../providers/sound_provider.dart';
 import 'dice_roll_animation.dart';
+import '../models/dice_icon.dart';
 
 /// A widget that allows users to select, roll and save dice combinations
 class DiceRoller extends StatefulWidget {
@@ -130,10 +131,33 @@ class _DiceRollerState extends State<DiceRoller> {
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
-                                        _getDiceIcon(sides, dieSize)
+                                        DiceIcon(
+                                          sides: sides,
+                                          size: dieSize,
+                                          fillColor: Theme.of(context).colorScheme.primary,
+                                          strokeColor: Theme.of(context).colorScheme.background,
+                                        ),
+                                        
                                       ],
                                     ),
                                   ),
+                                  // Dice type inform
+                                  if (count == 0)
+                                    IgnorePointer(
+                                      child: Container(
+                                        width: dieSize,
+                                        height: dieSize,
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'd$sides',
+                                          style: TextStyle(
+                                            fontSize: dieSize * 0.3,
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.4),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   // Dice count indicator
                                   if (count > 0)
                                     IgnorePointer(
@@ -146,7 +170,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                           style: TextStyle(
                                             fontSize: dieSize * 0.4,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.red.withOpacity(0.8),
+                                            color: Theme.of(context).colorScheme.secondary,
                                             shadows: const [
                                               Shadow(
                                                 color: Colors.black,
@@ -171,7 +195,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                           width: dieSize * 0.25,
                                           height: dieSize * 0.25,
                                           decoration: BoxDecoration(
-                                            color: Colors.red,
+                                            color: Theme.of(context).colorScheme.secondary,
                                             shape: BoxShape.circle,
                                           ),
                                           child: const Center(
@@ -207,9 +231,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                           width: textFieldSize,
                                           height: textFieldSize,
                                           decoration: BoxDecoration(
-                                            color: Colors.black,
-                                            border: Border.all(color: Colors.red),
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: Theme.of(context).colorScheme.background,
                                           ),
                                           child: Stack(
                                             children: [
@@ -227,7 +249,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                                   style: TextStyle(
                                                     fontSize: textFieldSize * 0.5,
                                                     fontWeight: FontWeight.bold,
-                                                    color: Colors.red.withOpacity(0.8),
+                                                    color: Theme.of(context).colorScheme.secondary,
                                                   ),
                                                   textAlign: TextAlign.center,
                                                 ),
@@ -235,6 +257,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                               Positioned(
                                                 left: 0,
                                                 top: 0,
+                                                bottom: 0,                                                
                                                 child: GestureDetector(
                                                   onTap: () {
                                                     final value = diceSet.modifier - 1;
@@ -244,7 +267,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                                     width: dieSize * 0.25,
                                                     height: dieSize * 0.25,
                                                     decoration: BoxDecoration(
-                                                      color: Colors.red,
+                                                      color: Theme.of(context).colorScheme.secondary,
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Center(
@@ -258,6 +281,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                               Positioned(
                                                 right: 0,
                                                 top: 0,
+                                                bottom: 0,
                                                 child: GestureDetector(
                                                   onTap: () {
                                                     final value = diceSet.modifier + 1;
@@ -267,7 +291,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                                     width: dieSize * 0.25,
                                                     height: dieSize * 0.25,
                                                     decoration: BoxDecoration(
-                                                      color: Colors.red,
+                                                      color: Theme.of(context).colorScheme.secondary,
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Center(
@@ -280,6 +304,8 @@ class _DiceRollerState extends State<DiceRoller> {
                                               ),
                                               Positioned(
                                                 bottom: 0,
+                                                left: 0,
+                                                right: 0,
                                                 child: GestureDetector(
                                                   onTap: () {
                                                     Provider.of<DiceSetProvider>(context, listen: false)
@@ -289,7 +315,7 @@ class _DiceRollerState extends State<DiceRoller> {
                                                     width: dieSize * 0.25,
                                                     height: dieSize * 0.25,
                                                     decoration: BoxDecoration(
-                                                      color: Colors.red,
+                                                      color: Theme.of(context).colorScheme.secondary,
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Center(
@@ -403,45 +429,4 @@ class _DiceRollerState extends State<DiceRoller> {
     Overlay.of(context).insert(entry!);
   }
   //endregion
-
-  //region Dice Icon Helper
-  Widget _getDiceIcon(int sides, double size) {
-    final fillColor = Theme.of(context).colorScheme.primary;
-    final lineColor = Theme.of(context).colorScheme.background;
-    
-    Widget buildDiceWithColors(String assetPath) {
-      return Stack(
-        children: [
-          //Fill layer
-          SvgPicture.asset(
-            assetPath,
-            width: size,
-            height: size,
-          ),
-        ],
-      );
-    }
-
-    switch (sides) {
-      case 4:
-        return buildDiceWithColors('assets/icons/dice-d4.svg');
-      case 6:
-        return buildDiceWithColors('assets/icons/dice-d6.svg');
-      case 8:
-        return buildDiceWithColors('assets/icons/dice-d8.svg');
-      case 10:
-        return buildDiceWithColors('assets/icons/dice-d10.svg');
-      case 12:
-        return buildDiceWithColors('assets/icons/dice-d12.svg');
-      case 20:
-        return buildDiceWithColors('assets/icons/dice-d20.svg');
-      default:
-        return Icon(
-          Icons.casino,
-          size: size,
-          color: fillColor,
-        );
-  }
-  //endregion
-  }
 }
