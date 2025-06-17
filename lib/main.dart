@@ -37,10 +37,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+        final preset = AppTheme.colorPresets[themeProvider.presetIndex];
         return MaterialApp(
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.system,
+          theme: AppTheme.createTheme(preset, isDark: false),
+          darkTheme: AppTheme.createTheme(preset, isDark: true),
+          themeMode: themeProvider.themeMode,
           initialRoute: '/',
           routes: {
             '/': (context) => const MainScreen(),

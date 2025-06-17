@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/sound_provider.dart';
+import '../themes/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -14,50 +15,72 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'App Settings',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: Icon(Icons.settings, color: Theme.of(context).colorScheme.primary),
             ),
-
+            // Theme Section
             Card(
               elevation: 2,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Text(
-                      'Appearance',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Icon(Icons.dark_mode, color: Theme.of(context).colorScheme.primary),
                     const Divider(),
                     Consumer<ThemeProvider>(
                       builder: (context, themeProvider, child) {
-                        return SwitchListTile(
+                        final isDark = themeProvider.isDarkMode;
+                        final switchWidget = SwitchListTile(
                           title: const Text('Dark Mode'),
-                          subtitle: const Text('Enable dark theme'),
                           value: themeProvider.isDarkMode,
-                          onChanged: (value) {
-                            themeProvider.toggleTheme();
-                          },
+                          onChanged: (_) => themeProvider.toggleTheme(),
+                          activeColor: Colors.white,
+                          inactiveThumbColor: Theme.of(context).colorScheme.primary,
                         );
+
+                        return switchWidget;
                       },
                     ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
+            // Color Preset Section
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Icon(Icons.color_lens, color: Theme.of(context).colorScheme.primary),
+                        const Divider(),
+                        DropdownButton<int>(
+                          value: themeProvider.presetIndex,
+                          items: List.generate(
+                            AppTheme.colorPresets.length,
+                            (index) => DropdownMenuItem(
+                              value: index,
+                              child: Text(AppTheme.colorPresets[index].name),
+                            ),
+                          ),
+                          onChanged: (index) {
+                            if (index != null) {
+                              themeProvider.setPreset(index);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            // Sound Section
             Card(
               elevation: 2,
               child: Padding(
@@ -107,9 +130,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
+            // About Section
             Card(
               elevation: 2,
               child: Padding(
@@ -133,7 +155,8 @@ class SettingsScreen extends StatelessWidget {
                       title: const Text('View Source Code'),
                       trailing: const Icon(Icons.open_in_new),
                       onTap: () {
-                        const url = 'https://github.com/leorfernandes/dice-rolling-app';
+                        // You can use url_launcher to open the URL
+                        // launchUrl(Uri.parse('https://github.com/leorfernandes/dice-rolling-app'));
                       },
                     ),
                   ],

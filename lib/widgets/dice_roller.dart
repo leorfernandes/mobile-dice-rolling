@@ -384,8 +384,8 @@ class _DiceRollerState extends State<DiceRoller> {
     });
 
     // Play sound effect
-    final soundProvider = Provider.of<SoundProvider>(context, listen: false);
-    await soundProvider.playRollSound();
+    // final soundProvider = Provider.of<SoundProvider>(context, listen: false);
+    // await soundProvider.playRollSound();
 
     // Generate random dice results
     final Map<int, List<int>> results = {};
@@ -404,25 +404,25 @@ class _DiceRollerState extends State<DiceRoller> {
       _showingAnimation = true;
     });
 
+    final totalDiceCount = diceSet.dice.values.fold(0, (a, b) => a + b);
+    final highestSides = diceSet.dice.keys.isNotEmpty ? diceSet.dice.keys.reduce(max) : 6;
+    final totalResult = results.entries
+      .map((e) => e.value.fold(0, (a, b) => a + b))
+      .fold(0, (a, b) => a + b) + diceSet.modifier;
+
     entry = OverlayEntry(
-      builder: (context) => DiceRollAnimation(
-        results: results,
+      builder: (context) => DiceRollAnimationPage(
+        diceCount: totalDiceCount,
+        diceSides: highestSides,
         modifier: diceSet.modifier,
+        result: totalResult,
         onComplete: () {
+          entry?.remove();
           setState(() {
-            _rollResults = results;
             _isRolling = false;
             _showingAnimation = false;
           });
-
-          entry?.remove();
-
-          // Add result to history if widget is still mounted
-          if (mounted) {
-            Provider.of<HistoryProvider>(context, listen: false)
-                .addCombinedRoll(results, diceSet.modifier);
-          }
-        },
+        }
       ),
     );
 

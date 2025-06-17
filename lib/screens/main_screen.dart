@@ -211,8 +211,8 @@ class _MainScreenState extends State<MainScreen> {
         child: GestureDetector(
           onTap: onTap,
           child: Container(
-            width: isHorizontal ? double.infinity : 40,
-            height: isHorizontal ? 40 : double.infinity,
+            width: isHorizontal ? double.infinity : 48,
+            height: isHorizontal ? 48 : double.infinity,
             color: Colors.transparent,
             child: Center(
               child: Container( 
@@ -222,8 +222,8 @@ class _MainScreenState extends State<MainScreen> {
                   children: [
                     Icon(
                       _getIcon(alignment, _verticalPage, _horizontalPage),
-                      color: Theme.of(context).colorScheme.secondary,
-                      size: 24,
+                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+                      size: 36,
                     ),
                     const SizedBox(width: 4),
                   ],

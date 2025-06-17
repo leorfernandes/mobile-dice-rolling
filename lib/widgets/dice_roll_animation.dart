@@ -1,388 +1,282 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../models/dice_icon.dart';
 
-// -----------------------------------------------------------------------------
-// MODELS & DATA CLASSES
-// -----------------------------------------------------------------------------
-
-/// Defines color schemes for different types of dice
-class DiceColorScheme {
-  final Color d4;
-  final Color d6;
-  final Color d8;
-  final Color d10;
-  final Color d12;
-  final Color d20;
-  final Color d100;
-  final Color defaultDice;
-
-  const DiceColorScheme({
-    required this.d4,
-    required this.d6,
-    required this.d8,
-    required this.d10,
-    required this.d12,
-    required this.d20,
-    required this.d100,
-    required this.defaultDice,
-  });
-
-  // Predefined themes
-  static const DiceColorScheme vibrant = DiceColorScheme(
-    d4: Color(0xFFD32F2F), // Bright red
-    d6: Color(0xFF1976D2), // Bright blue
-    d8: Color(0xFF388E3C), // Bright green
-    d10: Color(0xFFFFA000), // Amber
-    d12: Color(0xFF7B1FA2), // Purple
-    d20: Color(0xFF0097A7), // Teal
-    d100: Color(0xFFE64A19), // Deep orange
-    defaultDice: Color(0xFF616161), // Grey
-  );
-
-  static const DiceColorScheme dark = DiceColorScheme(
-    d4: Color(0xFF8B0000), // Dark red
-    d6: Color(0xFF0D47A1), // Dark blue
-    d8: Color(0xFF1B5E20), // Dark green
-    d10: Color(0xFFFF6F00), // Dark amber
-    d12: Color(0xFF4A148C), // Dark purple
-    d20: Color(0xFF006064), // Dark teal
-    d100: Color(0xFFBF360C), // Dark orange
-    defaultDice: Color(0xFF424242), // Dark grey
-  );
-
-  static const DiceColorScheme light = DiceColorScheme(
-    d4: Color(0xFFFFCDD2), // Light red
-    d6: Color(0xFFBBDEFB), // Light blue
-    d8: Color(0xFFC8E6C9), // Light green
-    d10: Color(0xFFFFECB3), // Light amber
-    d12: Color(0xFFE1BEE7), // Light purple
-    d20: Color(0xFFB2EBF2), // Light teal
-    d100: Color(0xFFFFCCBC), // Light orange
-    defaultDice: Color(0xFFEEEEEE), // Light grey
-  );
-}
-
-/// Helper class to store visual properties for each die
-class DiceVisual {
-  Offset position;
-  double rotation;
-  double scale;
-  int result;
-
-  late List<Offset> path;
-  int pathIndex = 0;
-
-  late double initialSpeed;
-  late double currentSpeed;
-  late double decelaration;
-
-  DiceVisual({
-    required this.position,
-    required this.rotation,
-    required this.scale,
-    required this.result,
-  }) {
-    path = _generateRandomPath();
-    final random = Random();
-    initialSpeed = 0.3 + random.nextDouble() * 0.4;
-    currentSpeed = initialSpeed;
-    decelaration = 0.01 + random.nextDouble() * 0.02;
-  }
-
-  List<Offset> _generateRandomPath() {
-    final Random random = Random();
-    final List<Offset> points = [];
-    points.add(position);
-
-    final int numPoints = random.nextInt(3) + 4; // Between 4 and 6 points
-    final targetX = 0.1 + random.nextDouble() * 0.8;
-    final targetY = 0.1 + random.nextDouble() * 0.8;
-
-    for (int i = 0; i < numPoints; i++) {
-      final progress = (i + 1) / numPoints;
-      double bounceHeight;
-      if (progress < 0.6) {
-        bounceHeight = (1.0 - progress) * (0.2 + random.nextDouble() * 0.8);
-      } else {
-        bounceHeight = (1.0 - progress) * (0.1 + random.nextDouble() * 0.4);
-      }
-      final verticalOffset = -bounceHeight * sin(progress * 3 * pi);
-      final deviation = (1 - progress) * (random.nextDouble() * 0.2 - 0.1);
-
-      points.add(Offset(
-        position.dx + (targetX - position.dx) * progress + deviation,
-        position.dy + (targetY - position.dy) * progress + verticalOffset,
-      ));
-    }
-    return points;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// MAIN WIDGET
-// -----------------------------------------------------------------------------
-
-class DiceRollAnimation extends StatefulWidget {
-  final Map<int, List<int>> results;
+class DiceRollAnimationPage extends StatefulWidget {  
+  final int diceCount;
+  final int diceSides;
   final int modifier;
-  final VoidCallback onComplete;
-  final bool showFinalResults;
+  final int result;
+  final VoidCallback? onComplete;
 
-  const DiceRollAnimation({
+  const DiceRollAnimationPage({
     super.key,
-    required this.results,
+    required this.diceCount,
+    required this.diceSides,
     required this.modifier,
-    required this.onComplete,
-    this.showFinalResults = false,
+    required this.result,
+    this.onComplete,
   });
 
   @override
-  State<DiceRollAnimation> createState() => _DiceRollAnimationState();
+  State<DiceRollAnimationPage> createState() => _DiceRollAnimationPageState();
 }
 
-// -----------------------------------------------------------------------------
-// WIDGET STATE IMPLEMENTATION
-// -----------------------------------------------------------------------------
+class _DiceRollAnimationPageState extends State<DiceRollAnimationPage> with TickerProviderStateMixin {
+  // Animation controllers and state variables
+  late AnimationController _moveController;
+  late AnimationController _scaleController;
+  late AnimationController _throwController;
+  late AnimationController _spinController;
 
-class _DiceRollAnimationState extends State<DiceRollAnimation>
-    with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late Timer? _numberChangeTimer;
-  int _currentNumber = 0;
-  bool _animationComplete = false;
-  int _finalTotal = 0;
+  Offset _fingerPosition = Offset.zero;
+  bool _isHolding = false;
+  bool _isThrown = false;
+  bool _showNumbers = false;
+  double _lastDx = 0.0;
+  double _angularVelocity = 0.0;
 
-  List<int> _currentDigits = [];
-  List<Timer?> _digitTimers = [];
+  // Dice state
+  late List<double> _diceRotations;
+  late List<double> _diceOffsets;
 
-  final colorScheme = DiceColorScheme.vibrant;
+  // Number rolling
+  int _rollingNumber = 0;
+  Timer? _numberTimer;
 
   @override
   void initState() {
     super.initState();
-    _setupAnimation();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    )..forward();
+
+    _moveController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    _throwController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    _throwController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _showNumbers = true;
+        });
+        _startNumberRolling();
+      }
+    });
+
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..addListener(() {
+      setState(() {
+        for (int i = 0; i < _diceRotations.length; i++) {
+          _diceRotations[i] += _angularVelocity;
+        }
+        _angularVelocity *= 0.96; // Friction
+        if (_angularVelocity.abs() < 0.001) {
+          _spinController.stop();
+        }
+      });
+    });
+
+    // Initialize dice rotations and offsets
+    final rand = Random();
+    _diceRotations = List.generate(widget.diceCount, (_) => rand.nextDouble() * pi * 2);
+    _diceOffsets = List.generate(widget.diceCount, (i) {
+      // Spread dice horizontally, centered
+      double spread = (i - (widget.diceCount - 1) / 2) * 60.0;
+      return spread + rand.nextDouble() * 10 - 5;
+    });
   }
 
   @override
   void dispose() {
-    for (var timer in _digitTimers) {
-      timer?.cancel();
-    }
-    _controller.dispose();
+    _scaleController.dispose();
+    _moveController.dispose();
+    _throwController.dispose();
+    _numberTimer?.cancel();
+    _spinController.dispose();
     super.dispose();
   }
 
-  void _setupAnimation() {
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 5000),
-    );
-
-    // Calculate the final total and maximun possible value for each die type
-    Map<int, int> maxPerDieType = {};
-    _finalTotal = widget.results.entries.fold(0, (sum, entry) {
-    // Calculate max possible value for each die type
-    maxPerDieType[entry.key] = entry.key * entry.value.length; // die sides * number of dice
-    return sum + entry.value.reduce((a, b) => a + b);
-  }) + widget.modifier;
-
-    int maxPossibleValue = maxPerDieType.values.fold(0, (sum, max) => sum + max) + widget.modifier;
-
-    _currentDigits = _finalTotal.toString().split('').map(int.parse).toList();
-
-    // Create timer for each digit
-    for (int i = 0; i < _currentDigits.length; i++) {
-      final digitTimer = Timer.periodic(
-        Duration(milliseconds: 50 + (i * 20)),
-        (timer) {
-          if (_controller.value < 0.8) {
-            setState(() {
-              if (widget.results.length == 1 && widget.results.values.first.length == 1) {
-                final dieSides = widget.results.keys.first;
-                final maxValue = dieSides + widget.modifier;
-                final maxForPosition = _getMaxValueForPosition(i, maxValue);           
-              _currentDigits[i] = Random().nextInt(maxForPosition + 1);
-            } else {
-              final maxForPosition = _getMaxValueForPosition(i, maxPossibleValue);
-              _currentDigits[i] = Random().nextInt(maxForPosition + 1);
-            }
-            });
-          } else {
-            timer.cancel();
-            setState(() {
-              _currentDigits[i] = int.parse(_finalTotal.toString()[i]);
-            });
-            if (i == _currentDigits.length - 1) {
-              _animationComplete = true;
-            }
-          }
-        }
-      );
-      _digitTimers.add(digitTimer);
-    }
-
-    _controller.forward();
+  void _onLongPressStart(LongPressStartDetails details) {
+    setState(() {
+      _isHolding = true;
+      _fingerPosition = details.localPosition;
+    });
+    _moveController.forward(from: 0.0);
   }
 
-// Helper method
-  int _getMaxValueForPosition(int position, int maxValue) {
-    String maxValueStr = maxValue.toString();
-    if (position >= maxValueStr.length) return 9;
-
-    // for the leftmost digit, use the actual max value's digit
-    if (position == 0) {
-      return int.parse(maxValueStr[0]);
-    }
-
-    String currentPrefix = maxValueStr.substring(0, position);
-    String finalPrefix = _finalTotal.toString().substring(0, position);
-
-    if (currentPrefix == finalPrefix) {
-      return int.parse(maxValueStr[position]);
-    }
-
-    return 9;
-  }
-
-  Color _getDiceColor(int sides) {
-    switch (sides) {
-      case 4:
-        return colorScheme.d4;
-      case 6:
-        return colorScheme.d6;
-      case 8:
-        return colorScheme.d8;
-      case 10:
-        return colorScheme.d10;
-      case 12:
-        return colorScheme.d12;
-      case 20:
-        return colorScheme.d20;
-      case 100:
-        return colorScheme.d100;
-      default:
-        return colorScheme.defaultDice;
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (_isHolding && !_isThrown) {
+      setState(() {
+        _fingerPosition = details.localPosition;
+        _lastDx = details.delta.dx;
+        for (int i = 0; i < _diceRotations.length; i++) {
+          _diceRotations[i] += details.delta.dx * 0.01;
+        }      
+      });
     }
   }
 
-  Widget getDiceIcon(int sides, double size) {
-    final color = _getDiceColor(6).withOpacity(0.9);
-    switch (sides) {
-      case 4:
-        return SvgPicture.asset(
-          'assets/icons/dice-d4.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      case 6:
-        return SvgPicture.asset(
-          'assets/icons/dice-d6.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      case 8:
-        return SvgPicture.asset(
-          'assets/icons/dice-d8.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      case 10:
-        return SvgPicture.asset(
-          'assets/icons/dice-d10.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      case 12:
-        return SvgPicture.asset(
-          'assets/icons/dice-d12.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      case 20:
-        return SvgPicture.asset(
-          'assets/icons/dice-d20.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      case 100:
-        return SvgPicture.asset(
-          'assets/icons/dice-d20.svg',
-          width: size,
-          height: size,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-        );
-      default:
-        return Icon(Icons.casino, size: size, color: _getDiceColor(0).withOpacity(0.9));
+  void _onPanEnd(DragEndDetails details) {
+    if (_isHolding && !_isThrown) {
+      final velocity = details.velocity.pixelsPerSecond;
+      // Calculate angular velocity based on last drag
+      _angularVelocity = _lastDx * 0.02;
+      if (_angularVelocity.abs() > 0.001) {
+        _spinController.repeat();
+      }
+      if (velocity.dy < -300) {
+        // Upward throw detected
+        _spinController.stop();
+        setState(() {
+          _isThrown = true;
+        });
+        _throwController.forward(from: 0.0);
+      }
+      setState(() {
+        _isHolding = false;
+      });
     }
+  }
+
+  void _startNumberRolling() {
+    final max = widget.diceCount * widget.diceSides + widget.modifier;
+    final min = widget.diceCount + widget.modifier;
+    int interval = 40;
+    int slowdownStep = 0;
+    _rollingNumber = Random().nextInt(max - min + 1) + min;
+
+    _numberTimer = Timer.periodic(Duration(milliseconds: interval), (timer) {
+      setState(() {
+        _rollingNumber = Random().nextInt(max - min + 1) + min;
+      });
+      slowdownStep++;
+      if (slowdownStep > 20) interval = 80;
+      if (slowdownStep > 35) interval = 160;
+      if (slowdownStep > 45) interval = 320;
+      if (slowdownStep > 50) {
+        timer.cancel();
+        setState(() {
+          _rollingNumber = widget.result;
+        });
+      }
+    });
+  }
+
+  void _onTap() {
+    widget.onComplete?.call();
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final Size screenSize = MediaQuery.of(context).size;
+    final Offset center = Offset(screenSize.width / 2, screenSize.height / 2);
+
+    // Dice position logic
+    Offset dicePos = center;
+    if (_isHolding && !_isThrown) {
+      dicePos = _fingerPosition;
+    } else if (_isThrown) {
+      // Animate dice moving up and shrinking
+      dicePos = Offset(center.dx, center.dy - _throwController.value * screenSize.height * 0.7);
+    }
+
+    double diceScale = _scaleController.value;
+    if (_isThrown) {
+      diceScale = 1.0 - _throwController.value;
+    }
+
     return GestureDetector(
-      onTap: () {
-        if (_animationComplete) {
-          widget.onComplete();
-        }
-      },
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Stack(
-            children: [
-              Container(
-                color: Colors.black.withOpacity(0.9 * _controller.value),
-              ),
-              if (_controller.value > 0.3)
-                Center(
-                  child: _buildNumberDisplay(),
-                ),
-            ],
+      onLongPressStart: _onLongPressStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      onTap: _showNumbers ? () => _onTap : null,
+      child: Stack(
+        children: [
+          // Dice animation
+          AnimatedBuilder(
+            animation: Listenable.merge([_scaleController, _throwController]),
+            builder: (context, child) {
+              if (_showNumbers) return const SizedBox.shrink();
+              return Stack(
+                children: List.generate(widget.diceCount, (i) {
+                  // Dice position logic
+                  Offset dicePos = center + Offset(_diceOffsets[i], 0);
+                  if (_isHolding && !_isThrown) {
+                    dicePos = _fingerPosition + Offset(_diceOffsets[i], 0);
+                  } else if (_isThrown) {
+                    // Animate dice moving up and shrinking, with a little horizontal spread
+                    dicePos = Offset(
+                      center.dx + _diceOffsets[i] * (1 - _throwController.value),
+                      center.dy - _throwController.value * screenSize.height * 0.7,
+                    );
+                  }
+
+                  return Positioned(
+                    left: dicePos.dx - 40 * diceScale,
+                    top: dicePos.dy - 40 * diceScale,
+                    child: Transform.rotate(
+                      angle: _diceRotations[i],
+                      child: Transform.scale(
+                        scale: diceScale,
+                        child: DiceIcon(
+                          sides: widget.diceSides,
+                          size: 80,
+                          fillColor: Theme.of(context).colorScheme.primary,
+                          strokeColor: Theme.of(context).colorScheme.background,
+                        ),
+                      ),
+                    ),
+                  );
+            }),
           );
-        },
+            },
+          ),
+          // Numbers box
+          if (_showNumbers)
+          Center(
+            child: AnimatedScale(
+              scale: 1.0,
+              duration: const Duration(milliseconds: 400),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '$_rollingNumber',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-
-  Widget _buildNumberDisplay() {
-        return Container(
-          width: 360,
-          height: 120,
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Colors.white,
-              width: 3,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: _currentDigits.map((digit) {
-                        return SizedBox(
-                          width: 70,
-                          child: Text(
-                            digit.toString(),
-                            style: const TextStyle(
-                              fontSize: 120,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            textAlign: TextAlign.center
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                );
-              }
-  }
+}
