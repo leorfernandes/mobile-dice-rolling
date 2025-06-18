@@ -377,6 +377,7 @@ class _DiceRollerState extends State<DiceRoller> {
 
   //region Dice Rolling Logic
   Future<void> _rollDice(DiceSet diceSet) async {
+    print('Rolling dice!');
     if (diceSet.dice.isEmpty || _isRolling) return;
 
     setState(() {
@@ -412,19 +413,18 @@ class _DiceRollerState extends State<DiceRoller> {
 
     entry = OverlayEntry(
       builder: (context) => DiceRollAnimationPage(
-        diceCount: totalDiceCount,
-        diceSides: highestSides,
-        modifier: diceSet.modifier,
-        result: totalResult,
-        onComplete: () {
-          entry?.remove();
-          setState(() {
-            _isRolling = false;
-            _showingAnimation = false;
-          });
-        }
-      ),
-    );
+    diceTypes: diceSet.dice, // Map<int, int> of sides -> count
+    modifier: diceSet.modifier,
+    result: totalResult,
+    onComplete: () {
+      entry?.remove();
+      setState(() {
+        _isRolling = false;
+        _showingAnimation = false;
+      });
+    },
+  ),
+);
 
     Overlay.of(context).insert(entry!);
   }
