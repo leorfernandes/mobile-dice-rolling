@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Represents a color preset with a name and a set of colors.
 class ColorPreset {
   final String name;
   final Color primary;
@@ -16,8 +17,10 @@ class ColorPreset {
   });
 }
 
+/// Manages theme data and color presets for the application.
 class AppTheme {
-  static const colorPresets = [
+  /// Collection of available color presets for the app.
+  static const List<ColorPreset> colorPresets = [
     ColorPreset(
       name: 'Fantasy Classic',
       primary: Color(0xFF8B5E3C),
@@ -55,9 +58,26 @@ class AppTheme {
     ),
   ];
   
+  /// Default light theme using the first color preset.
+  static ThemeData get lightTheme => createTheme(colorPresets[0], isDark: false);
+  
+  /// Default dark theme (currently a joke all-black theme).
+  static ThemeData get darkTheme => createTheme(colorPresets[0], isDark: true);
+  
+  /// Creates a ThemeData object from a given ColorPreset.
+  ///
+  /// [preset] The color preset to use for the theme.
+  /// [isDark] Whether to create a dark theme (true) or light theme (false).
+  /// Returns a ThemeData object configured with the preset's colors.
   static ThemeData createTheme(ColorPreset preset, {bool isDark = false}) {
+    // Validate input
+    if (preset == null) {
+      // Fallback to first preset if null is provided
+      return createTheme(colorPresets.isNotEmpty ? colorPresets[0] : _createFallbackPreset(), isDark: isDark);
+    }
+    
     if (isDark) {
-      // Joke dark mode:
+      // Joke dark mode - all black theme
       return ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
@@ -84,6 +104,7 @@ class AppTheme {
       );
     }
     
+    // Create a light theme based on the provided color preset
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme(
@@ -104,12 +125,20 @@ class AppTheme {
         onError: Colors.white,
         outline: preset.accent.withOpacity(0.5),
         outlineVariant: preset.accent.withOpacity(0.3),
-        // Add any other required ColorScheme fields if needed
       ),
       scaffoldBackgroundColor: preset.background,
     );
   }
-
-  static ThemeData get lightTheme => createTheme(colorPresets[0], isDark: false);
-  static ThemeData get darkTheme => createTheme(colorPresets[0], isDark: true);
+  
+  /// Creates a fallback color preset if needed.
+  /// This is used when no presets are available.
+  static ColorPreset _createFallbackPreset() {
+    return const ColorPreset(
+      name: 'Fallback',
+      primary: Colors.blue,
+      background: Colors.white,
+      accent: Colors.blueAccent,
+      text: Colors.black,
+    );
+  }
 }

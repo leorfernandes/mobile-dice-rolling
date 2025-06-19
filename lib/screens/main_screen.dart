@@ -5,6 +5,8 @@ import '../widgets/settings.dart';
 import '../screens/presets_screen.dart';
 import '../widgets/help_overlay.dart';
 
+/// Main screen of the dice rolling application.
+/// Handles navigation between various screens with a page view approach.
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -13,51 +15,60 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // Controllers and page indices
+  // ---- Controllers and state variables ----
   final PageController _horizontalController = PageController(initialPage: 1);
   final PageController _verticalController = PageController(initialPage: 0);
-  int _horizontalPage = 1;
-  int _verticalPage = 0;
-  bool _showHelp = false;
+  int _horizontalPage = 1; // 0: Settings, 1: Dice Roller, 2: History
+  int _verticalPage = 0;   // 0: Main screens, 1: Presets
+  bool _showHelp = false;  // Controls help overlay visibility
+
+  // ---- Lifecycle methods ----
+  @override
+  void initState() {
+    super.initState();
+    // Show help overlay on first launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _showHelp = true);
+      }
+    });
+  }
 
   @override
   void dispose() {
+    // Clean up controllers
     _horizontalController.dispose();
     _verticalController.dispose();
     super.dispose();
   }
 
+  // ---- Build methods ----
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
+          // Main interface stack
           Stack(
             children: [
-          _buildMainPageView(),
-          ..._buildEdgeTapAreas(context),
-          _buildHelpButton(),
+              _buildMainPageView(),
+              ..._buildEdgeTapAreas(context),
+              _buildHelpButton(),
             ],
           ),
-      if (_showHelp)
-        HelpOverlay(
-          onDismiss: () => setState(() => _showHelp = false),
-          horizontalPage: _horizontalPage,
-          verticalPage: _verticalPage,
-        ),
+          // Conditionally show help overlay
+          if (_showHelp)
+            HelpOverlay(
+              onDismiss: () => setState(() => _showHelp = false),
+              horizontalPage: _horizontalPage,
+              verticalPage: _verticalPage,
+            ),
         ]
       )
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() => _showHelp = true);
-    });
-  }
-
+  /// Builds the main navigation button that shows the help overlay
   Widget _buildHelpButton() {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 8,
@@ -73,23 +84,33 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  /// Builds the main page view with vertical navigation between
+  /// the horizontal screens and the presets screen
   Widget _buildMainPageView() {
     return PageView(
       scrollDirection: Axis.vertical,
       controller: _verticalController,
+      // Disable vertical scrolling if not on the dice roller page
+      physics: _horizontalPage == 1 
+          ? const AlwaysScrollableScrollPhysics() 
+          : const NeverScrollableScrollPhysics(),
       onPageChanged: (index) {
-        setState(() {
-          _verticalPage = index;
-        });
+        if (mounted) {
+          setState(() {
+            _verticalPage = index;
+          });
+        }
       },
       children: [
-        // Main horizontal PageView
+        // Main horizontal PageView (Settings, Roller, History)
         PageView(
           controller: _horizontalController,
           onPageChanged: (index) {
-            setState(() {
-              _horizontalPage = index;
-            });
+            if (mounted) {
+              setState(() {
+                _horizontalPage = index;
+              });
+            }
           },
           children: const [
             SettingsScreen(),
@@ -99,26 +120,36 @@ class _MainScreenState extends State<MainScreen> {
         ),
         // Presets Screen
         PresetsScreen(
-          onNavigateToRoller: () {
-            _verticalController
-                .animateToPage(
-                  0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                )
-                .then((_) {
-              _horizontalController.animateToPage(
-                1,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            });
-          },
+          onNavigateToRoller: _navigateToRoller,
         ),
       ],
     );
   }
 
+  /// Navigate from presets back to the dice roller
+  void _navigateToRoller() {
+    try {
+      _verticalController
+        .animateToPage(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        )
+        .then((_) {
+          if (mounted) {
+            _horizontalController.animateToPage(
+              1,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+    } catch (e) {
+      debugPrint('Error navigating to roller: $e');
+    }
+  }
+
+  /// Builds tap areas at the edges of the screen for navigation
   List<Widget> _buildEdgeTapAreas(BuildContext context) {
     final List<Widget> areas = [];
 
@@ -127,11 +158,7 @@ class _MainScreenState extends State<MainScreen> {
       areas.add(_buildEdgeTapArea(
         context: context,
         alignment: Alignment.centerRight,
-        onTap: () => _horizontalController.animateToPage(
-          1,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        ),
+        onTap: () => _animateToHorizontalPage(1),
       ));
     }
 
@@ -141,29 +168,17 @@ class _MainScreenState extends State<MainScreen> {
         _buildEdgeTapArea(
           context: context,
           alignment: Alignment.centerLeft,
-          onTap: () => _horizontalController.animateToPage(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
+          onTap: () => _animateToHorizontalPage(0),
         ),
         _buildEdgeTapArea(
           context: context,
           alignment: Alignment.centerRight,
-          onTap: () => _horizontalController.animateToPage(
-            2,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
+          onTap: () => _animateToHorizontalPage(2),
         ),
         _buildEdgeTapArea(
           context: context,
           alignment: Alignment.bottomCenter,
-          onTap: () => _verticalController.animateToPage(
-            1,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
+          onTap: () => _animateToVerticalPage(1),
           isHorizontal: true,
         ),
       ]);
@@ -174,11 +189,7 @@ class _MainScreenState extends State<MainScreen> {
       areas.add(_buildEdgeTapArea(
         context: context,
         alignment: Alignment.centerLeft,
-        onTap: () => _horizontalController.animateToPage(
-          1,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        ),
+        onTap: () => _animateToHorizontalPage(1),
       ));
     }
 
@@ -187,11 +198,7 @@ class _MainScreenState extends State<MainScreen> {
       areas.add(_buildEdgeTapArea(
         context: context,
         alignment: Alignment.topCenter,
-        onTap: () => _verticalController.animateToPage(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        ),
+        onTap: () => _animateToVerticalPage(0),
         isHorizontal: true,
       ));
     }
@@ -199,6 +206,33 @@ class _MainScreenState extends State<MainScreen> {
     return areas;
   }
 
+  /// Helper method to animate to a horizontal page with error handling
+  void _animateToHorizontalPage(int page) {
+    try {
+      _horizontalController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } catch (e) {
+      debugPrint('Error navigating to horizontal page $page: $e');
+    }
+  }
+
+  /// Helper method to animate to a vertical page with error handling
+  void _animateToVerticalPage(int page) {
+    try {
+      _verticalController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } catch (e) {
+      debugPrint('Error navigating to vertical page $page: $e');
+    }
+  }
+
+  /// Builds a single edge tap area for navigation
   Widget _buildEdgeTapArea({
     required BuildContext context,
     required Alignment alignment,
@@ -221,22 +255,23 @@ class _MainScreenState extends State<MainScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _getIcon(alignment, _verticalPage, _horizontalPage),
+                      _getIcon(alignment),
                       color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
                       size: 36,
                     ),
                     const SizedBox(width: 4),
                   ],
                 ),
+              ),
             ),
           ),
         ),
-      ),
       )
     );
   }
 
-  IconData _getIcon(Alignment alignment, int horizontalPage, int verticalPage) {
+  /// Determines the appropriate icon for navigation based on current page and alignment
+  IconData _getIcon(Alignment alignment) {
     if (_verticalPage == 0) {
       // On the horizontal pages
       switch (_horizontalPage) {
@@ -257,6 +292,7 @@ class _MainScreenState extends State<MainScreen> {
       // On the presets page
       if (alignment == Alignment.topCenter) return Icons.casino;
     }
+    // Default icon if no match found
     return Icons.help_outlined;
   }
 }

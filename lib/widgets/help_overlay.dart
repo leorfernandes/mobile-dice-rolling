@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// A widget that displays navigation help as an overlay with directional arrows and labels
 class HelpOverlay extends StatelessWidget {
+  /// Callback function when the overlay is dismissed
   final VoidCallback onDismiss;
+  
+  /// Current horizontal page index (0: Settings, 1: Dice Roller, 2: History)
   final int horizontalPage;
+  
+  /// Current vertical page index (0: Main pages, 1: Presets page)
   final int verticalPage;
 
   const HelpOverlay({
@@ -14,107 +20,156 @@ class HelpOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Validate page indices
+    if (horizontalPage < 0 || horizontalPage > 2) {
+      debugPrint('Warning: Invalid horizontalPage value: $horizontalPage');
+    }
+    if (verticalPage < 0 || verticalPage > 1) {
+      debugPrint('Warning: Invalid verticalPage value: $verticalPage');
+    }
+
     return Stack(
       children: [
-        // Semi-transparent background
+        // Semi-transparent background that dismisses overlay when tapped
         GestureDetector(
           onTap: onDismiss,
           child: Container(
             color: Colors.black54,
           ),
         ),
-        // Arrows and text
-        Center (
+        // Centered stack of directional indicators
+        Center(
           child: Stack(
-            children: 
-              _buildArrows(),
+            children: _buildNavigationGuides(),
           ),
         ),
       ],
     );
   }
 
-  List<Widget> _buildArrows() {
-    final List<Widget> arrows = [];
+  /// Builds the appropriate navigation guides based on current page position
+  List<Widget> _buildNavigationGuides() {
+    final List<Widget> guides = [];
 
     if (verticalPage == 0) {
-      // On the horizontal pages
+      // Main horizontal pages
       switch (horizontalPage) {
         case 0: // Settings page
-          arrows.add(_buildArrow(
+          guides.add(_buildDirectionalGuide(
             alignment: Alignment.centerRight,
-            arrow: Icons.arrow_forward,
-            icon: Icons.casino,
+            arrowIcon: Icons.arrow_forward,
+            direction: 'Swipe Left',
+            destination: 'Dice Roller',
           ));
           break;
         case 1: // Dice Roller Page
-          arrows.addAll([
-            _buildArrow(
-              alignment: Alignment.topCenter,
-              arrow: Icons.arrow_upward,
-              icon: Icons.casino,
-            ),
-            _buildArrow(
+          guides.addAll([
+            _buildDirectionalGuide(
               alignment: Alignment.centerLeft,
-              arrow: Icons.arrow_back,
-              icon: Icons.settings,
+              arrowIcon: Icons.arrow_back,
+              direction: 'Swipe Right',
+              destination: 'Settings',
             ),
-            _buildArrow(
+            _buildDirectionalGuide(
               alignment: Alignment.centerRight,
-              arrow: Icons.arrow_forward,
-              icon: Icons.history,
+              arrowIcon: Icons.arrow_forward,
+              direction: 'Swipe Left',
+              destination: 'History',
             ),
-            _buildArrow(
+            _buildDirectionalGuide(
               alignment: Alignment.bottomCenter,
-              arrow: Icons.arrow_downward,
-              icon: Icons.save,
+              arrowIcon: Icons.arrow_downward,
+              direction: 'Swipe Up',
+              destination: 'Presets',
             ),
           ]);
           break;
         case 2: // History page
-          arrows.add(_buildArrow(
+          guides.add(_buildDirectionalGuide(
             alignment: Alignment.centerLeft,
-            arrow: Icons.arrow_back,
-            icon: Icons.casino,
+            arrowIcon: Icons.arrow_back,
+            direction: 'Swipe Right',
+            destination: 'Dice Roller',
           ));
           break;
+        default:
+          // Handle unexpected page index
+          guides.add(_buildErrorMessage('Unknown page: $horizontalPage'));
+          break;
       }
-    } else {
-      // On the presets page
-      arrows.add(_buildArrow(
+    } else if (verticalPage == 1) {
+      // Presets page
+      guides.add(_buildDirectionalGuide(
         alignment: Alignment.topCenter,
-        arrow: Icons.arrow_upward,
-        icon: Icons.casino,
+        arrowIcon: Icons.arrow_upward,
+        direction: 'Swipe Down',
+        destination: 'Dice Roller',
       ));
+    } else {
+      // Handle unexpected vertical page index
+      guides.add(_buildErrorMessage('Unknown vertical page: $verticalPage'));
     }
 
-    return arrows;
+    return guides;
   }
 
-  Widget _buildArrow({
+  /// Builds a directional guide with an arrow icon and descriptive text
+  Widget _buildDirectionalGuide({
     required Alignment alignment,
-    required IconData icon,
-    required IconData arrow,
+    required String destination,
+    required String direction,
+    required IconData arrowIcon,
   }) {
     return Align(
       alignment: alignment,
       child: Padding(
         padding: const EdgeInsets.all(32.0),
-        child: Column (
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Arrow icon
             Icon(
-              arrow,
+              arrowIcon,
               color: Colors.white,
-              size: 48,
+              size: 36,
             ),
             const SizedBox(height: 8),
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 48,
+            // Direction text
+            Text(
+              direction,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Destination text
+            Text(
+              'to $destination',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Creates an error message widget for unexpected states
+  Widget _buildErrorMessage(String message) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.red.withOpacity(0.7),
+        child: Text(
+          'Error: $message',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

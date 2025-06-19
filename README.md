@@ -1,53 +1,82 @@
 # Dice Roller App
 
-🎲 A modern dice rolling app built with Flutter, featuring smooth animations and an intuitive interface.
+🎲 A modern dice rolling app built with Flutter, featuring smooth animations, sound effects, and an intuitive interface for tabletop RPGs and board games.
 
-🚧 **Work in Progress** — This project is under active development.
+## Features
 
-## About
+* Multiple Dice Types: Support for standard RPG dice (d4, d6, d8, d10, d12, d20, d100)
+* Combination Rolling: Roll multiple dice of different types simultaneously
+* Modifier System: Add positive or negative modifiers to your rolls
+* Presets: Save and load your favorite dice combinations
+* Roll History: Track all your previous rolls with detailed breakdown
+* Animated Rolling: Satisfying animations when rolling dice
+* Sound Effects: Audio feedback with multiple rolling sound variations
+* Various Themes: Choose from various color schemes
 
-A mobile dice rolling application that provides a sleek interface for rolling various types of dice (d4-d100), perfect for tabletop RPGs, board games, or any situation requiring random number generation.
+## Screenshots
 
-## Current Features
+![Main Screen](media/screenshot.png)
 
-- Support for multiple dice types (d4, d6, d8, d10, d12, d20, d100)
-- Dice combination rolling (multiple dice at once)
-- Modifier system for roll adjustments
-- Save and load dice presets
-- Roll history tracking
-- Smooth animations with visual feedback
-- Sound effects for rolling
+## Installation
 
-## Status
+### Prerequisites
+* Flutter (2.0 or newer)
+* Dart (2.12 or newer)
 
-✅ Core Features Implemented:
-- Basic dice rolling system
-- Multiple dice support
-- Modifier system
-- Preset saving/loading
-- Roll history
-- Basic animations and sound effects
-- Basic icons
+### Setup
+1. Clone the repository:
+```
+git clone https://github.com/leorfernandes/dice-roller-app.git
+```
 
-🔄 In Progress:
-- UI/UX polish and refinements
-- Performance optimizations
-- Animation and sound effects improvements
+2. Navigate to the project directory:
+```
+cd dice-roller-app/mobile_dice_rolling
+```
 
-## Future Features
+3. Install dependencies:
+```
+flutter pub get
+```
 
-- Theme customization
+4. Run the app:
+```
+flutter run
+```
 
-## Known Bugs
+## How to Use
 
-- Sound does not load sometimes
+1. Select Dice: Tap on dice icons to add them to your roll
+2. Add Modifiers: Use + and - buttons to adjust the modifier value
+3. Roll Dice: Tap the roll button to roll your selected dice
+4. Save Presets: Swipe down to access preset management
+5. View History: Swipe right to see your roll history
+6. Settings: Swipe left to access theme and sound settings
 
-## Getting Started
+## Technical Details
 
-1. Ensure you have Flutter installed on your machine
-2. Clone this repository
-3. Run `flutter pub get` to install dependencies
-4. Launch the app with `flutter run`
+* Built with Flutter for cross-platform compatibility
+* State management using Provider pattern
+* Custom animations for dice rolling
+* Persistent storage for presets and settings
+
+## Dependencies
+
+* provider: State management
+* shared_preferences: Local storage
+* audioplayers: Sound playback
+* flutter_svg: SVG rendering for dice icons
+* url_launcher: External link handling
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (git checkout -b feature/amazing-feature)
+3. Commit your changes (git commit -m 'Add some amazing feature')
+4. Push to the branch (git push origin feature/amazing-feature)
+5. Open a Pull Request
 
 ## License
 

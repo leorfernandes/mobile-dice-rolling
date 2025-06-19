@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../models/dice_icon.dart';
 
 class DiceRollAnimationPage extends StatefulWidget {
-  // Updated to accept a map of dice sides and their counts
+  // Properties
   final Map<int, int> diceTypes; // Map<sides, count>
   final int modifier;
   final int result;
@@ -22,285 +22,238 @@ class DiceRollAnimationPage extends StatefulWidget {
 }
 
 class _DiceRollAnimationPageState extends State<DiceRollAnimationPage> with TickerProviderStateMixin {
-  // Track each die's position, rotation, and type
-  late List<Offset> _dicePositions;
-  late List<double> _diceRotations;
-  late List<int> _diceSides; // Store the sides for each die
-  
-  // Track dragging state
-  bool _isDragging = false;
-  Offset _lastDragPosition = Offset.zero;
-  
-  // Animation controller for results
-  late AnimationController _resultAnimController;
+  // Animation-related properties
+  late AnimationController _scaleController;
+  Timer? _numberTimer;
+  int _animationStep = 0;
+  int _animationInterval = 50; // milliseconds
+
+  // State variables
+  int _rollingNumber = 0;
   bool _showResult = false;
-  bool _initialized = false;
 
-  int get _totalDiceCount => 
-      widget.diceTypes.values.fold(0, (sum, count) => sum + count);
-
+  // Lifecycle methods
   @override
   void initState() {
     super.initState();
-    print("DiceRollAnimationPage - initState with dice types: ${widget.diceTypes}");
-    
-    // Create lists with the correct total length
-    final totalDice = _totalDiceCount;
-    
-    // Initialize with empty values
-    _dicePositions = List.generate(totalDice, (_) => Offset.zero);
-    _diceRotations = List.generate(totalDice, (_) => 0.0);
-    
-    // Initialize the sides for each die
-    _diceSides = [];
-    widget.diceTypes.forEach((sides, count) {
-      for (int i = 0; i < count; i++) {
-        _diceSides.add(sides);
-      }
-    });
-    
-    // Shuffle the dice sides for visual variety
-    _diceSides.shuffle();
-    
-    // Initialize rotations
-    final random = Random();
-    for (int i = 0; i < _diceRotations.length; i++) {
-      _diceRotations[i] = random.nextDouble() * 2 * pi;
-    }
-    
-    _resultAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    
-    _resultAnimController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _showResult = true;
-        });
-      }
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    
-    // Now it's safe to access MediaQuery
-    if (!_initialized) {
-      final random = Random();
-      final screenSize = MediaQuery.of(context).size;
-      
-      // Initialize dice positions in the center with some spread
-      for (int i = 0; i < _dicePositions.length; i++) {
-        _dicePositions[i] = Offset(
-          screenSize.width / 2 + (random.nextDouble() * 120 - 60),
-          screenSize.height / 2 + (random.nextDouble() * 120 - 60),
-        );
-      }
-      
-      _initialized = true;
+    try {
+      _initializeAnimation();
+    } catch (e) {
+      _handleError('Animation initialization failed: $e');
     }
   }
 
   @override
   void dispose() {
-    _resultAnimController.dispose();
+    _cleanupAnimation();
     super.dispose();
   }
 
-  void _throwDice() {
-    print("Throwing dice");
-    _resultAnimController.forward(from: 0.0);
+  // Error handling
+  void _handleError(String message) {
+    debugPrint(message);
+    // Show a subtle error in the UI if animation fails
+    setState(() {
+      _showResult = true;
+      _rollingNumber = widget.result;
+    });
   }
 
+  // Animation initialization and cleanup
+  void _initializeAnimation() {
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _startRollingAnimation();
+  }
+
+  void _cleanupAnimation() {
+    _numberTimer?.cancel();
+    if (_scaleController.isAnimating) {
+      _scaleController.stop();
+    }
+    _scaleController.dispose();
+  }
+
+  // Animation logic
+  void _startRollingAnimation() {
+    try {
+      final (minValue, maxValue) = _calculateValueRange();
+      final random = Random();
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _rollingNumber = minValue + random.nextInt(maxValue - minValue + 1);
+      });
+      
+      _numberTimer = Timer.periodic(Duration(milliseconds: _animationInterval), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        
+        setState(() {
+          _rollingNumber = minValue + random.nextInt(maxValue - minValue + 1);
+          _updateAnimationSpeed();
+          
+          timer.cancel();
+          if (_animationStep < 25) {
+            _numberTimer = Timer(
+              Duration(milliseconds: _animationInterval),
+              _startRollingAnimation
+            );
+          } else {
+            _finishAnimation();
+          }
+        });
+      });
+    } catch (e) {
+      _handleError('Rolling animation failed: $e');
+    }
+  }
+
+  // Helper methods
+  (int, int) _calculateValueRange() {
+    if (widget.diceTypes.isEmpty) {
+      return (widget.modifier, widget.modifier);
+    }
+    
+    final int totalDiceCount = widget.diceTypes.entries
+        .fold(0, (sum, entry) => sum + entry.value);
+    
+    final int maxPossibleValue = widget.diceTypes.entries
+        .fold(0, (sum, entry) => sum + (entry.key * entry.value)) + widget.modifier;
+    
+    final int minPossibleValue = totalDiceCount + widget.modifier;
+    
+    return (minPossibleValue, maxPossibleValue);
+  }
+
+  void _updateAnimationSpeed() {
+    _animationStep++;
+    if (_animationStep > 4) _animationInterval = 100;
+    if (_animationStep > 8) _animationInterval = 200; 
+    if (_animationStep > 12) _animationInterval = 300;
+  }
+
+  void _finishAnimation() {
+    if (!mounted) return;
+    
+    setState(() {
+      _rollingNumber = widget.result;
+      _showResult = true;
+    });
+    
+    try {
+      _scaleController.forward();
+    } catch (e) {
+      _handleError('Scale animation failed: $e');
+    }
+  }
+
+  String _getDiceDescription() {
+    final buffer = StringBuffer();
+    
+    if (widget.diceTypes.isEmpty) {
+      return widget.modifier.toString();
+    }
+    
+    widget.diceTypes.forEach((sides, count) {
+      if (buffer.isNotEmpty) buffer.write(' + ');
+      buffer.write('${count}d$sides');
+    });
+    
+    if (widget.modifier != 0) {
+      buffer.write(' ${widget.modifier > 0 ? '+' : ''}${widget.modifier}');
+    }
+    
+    return buffer.toString();
+  }
+
+  // Build method
   @override
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
       child: GestureDetector(
-        // Handle gestures at the container level to move all dice
-        onPanStart: (details) {
-          setState(() {
-            _isDragging = true;
-            _lastDragPosition = details.localPosition;
-          });
-        },
-        onPanUpdate: (details) {
-          if (_isDragging && !_showResult) {
-            final delta = details.localPosition - _lastDragPosition;
-            setState(() {
-              // Move all dice by the same amount
-              for (int i = 0; i < _dicePositions.length; i++) {
-                _dicePositions[i] += delta;
-                // Add a bit of rotation based on horizontal movement
-                _diceRotations[i] += delta.dx * 0.01;
-              }
-              _lastDragPosition = details.localPosition;
-            });
-          }
-        },
-        onPanEnd: (details) {
-          setState(() {
-            _isDragging = false;
-          });
-          
-          // If thrown upward with enough velocity
-          if (details.velocity.pixelsPerSecond.dy < -500) {
-            _throwDice();
-          }
-        },
         onTap: _showResult ? () {
           widget.onComplete?.call();
-          Navigator.of(context).pop();
         } : null,
         child: Container(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withOpacity(0.8),
           width: double.infinity,
           height: double.infinity,
-          child: Stack(
-            children: [
-              // Dice layer
-              if (!_showResult)
-                ...List.generate(_dicePositions.length, (index) {
-                  // Get the correct dice sides for this index
-                  final sides = _diceSides[index];
-                  
-                  // Size variation based on sides (bigger dice for higher sides)
-                  final dieSize = 60 + (sides / 20 * 20); // 60-80px based on sides
-                  
-                  return Positioned(
-                    left: _dicePositions[index].dx - dieSize / 2,
-                    top: _dicePositions[index].dy - dieSize / 2,
-                    child: Transform.rotate(
-                      angle: _diceRotations[index],
-                      child: Container(
-                        width: dieSize,
-                        height: dieSize,
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: DiceIcon(
-                            sides: sides,
-                            size: dieSize * 0.9,
-                            fillColor: Theme.of(context).colorScheme.primary,
-                            strokeColor: Theme.of(context).colorScheme.secondary,
-                          ),
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: EdgeInsets.all(_showResult ? 40 : 30),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _getDiceDescription(),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AnimatedScale(
+                    scale: _showResult ? 1.2 : 1.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      _rollingNumber.toString(),
+                      style: TextStyle(
+                        fontSize: 72,
+                        fontWeight: FontWeight.bold,
+                        color: _showResult 
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (widget.modifier != 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        "(includes ${widget.modifier > 0 ? '+' : ''}${widget.modifier})",
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ),
-                  );
-                }),
-              
-              // Result box
-              if (_showResult)
-  Center(
-    child: Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 40,
-        vertical: 30,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 15,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            "Result",
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            widget.result.toString(),
-            style: TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
-            ),
-          ),
-          if (widget.modifier != 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                "(includes ${widget.modifier > 0 ? '+' : ''}${widget.modifier} modifier)",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                  if (_showResult)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Text(
+                        "Tap to dismiss",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-          SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Button to roll again
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _showResult = false;
-                    // Reset dice positions
-                    // ...reset code here...
-                  });
-                },
-                child: Text("Roll Again"),
-              ),
-              SizedBox(width: 16),
-              // Button to dismiss
-              OutlinedButton(
-                onPressed: () {
-                  widget.onComplete?.call();
-                },
-                child: Text("Dismiss"),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  ),
-            ],
           ),
         ),
       ),
     );
-  }
-  
-  // Get a color based on the die sides
-  Color _getDiceColor(int sides) {
-    switch (sides) {
-      case 4:
-        return Colors.blue;
-      case 6:
-        return Colors.red;
-      case 8:
-        return Colors.green;
-      case 10:
-        return Colors.purple;
-      case 12:
-        return Colors.orange;
-      case 20:
-        return Colors.teal;
-      default:
-        return Colors.red;
-    }
   }
 }
