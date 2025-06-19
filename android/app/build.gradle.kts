@@ -1,8 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("com.android.rollCraft")
+    id("RollCraft")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.appdistribution")
 }
 
 android {
@@ -20,24 +21,45 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.mobile_dice_rolling"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        applicationId = "com.yourname.diceroller" // Your package name
+        minSdk = 21 // Or your min SDK version
+        targetSdk = 33 // Or your target SDK version
+        versionCode = 1
+        versionName = "1.0.0"
     }
-
+    
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            
+            // App Distribution configuration
+            firebaseAppDistribution {
+                releaseNotes = "Initial release of Dice Roller App"
+                groups = "testers"
+            }
         }
     }
 }
+
+dependencies {
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+    
+    // Import the Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+    
+    // Dependencies for Firebase products without specifying versions
+    implementation("com.google.firebase:firebase-analytics")
+    
+    // Other Firebase products
+    implementation("com.google.firebase:firebase-appdistribution")
+}
+
+// This is required for Flutter
+apply(from = "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle")
 
 flutter {
     source = "../.."

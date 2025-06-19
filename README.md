@@ -13,6 +13,10 @@
 * Sound Effects: Audio feedback with multiple rolling sound variations
 * Various Themes: Choose from various color schemes
 
+## Live Demo
+
+Try the app online: [rollcraft-dfa5d.web.app](https://rollcraft-dfa5d.web.app/)
+
 ## Screenshots
 
 ![Main Screen](media/screenshot.png)
